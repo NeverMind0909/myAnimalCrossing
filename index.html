@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>모동숲 주민 관리</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="topbar-brand">
+          <h1 class="site-title">
+            <img src="./Title.png" alt="Animal Crossing: New Horizons 주민 관리" />
+          </h1>
+        </div>
+        <a
+          class="turnip-link"
+          href="https://turnipprophet.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Turnip Prophet 무값 예측기 열기"
+        >
+          무값 예측기
+        </a>
+      </header>
+
+      <section class="search-panel" aria-labelledby="search-title">
+        <div class="section-heading">
+          <h2 id="search-title">주민 검색</h2>
+          <span id="dataStatus" class="status-pill">로컬 데이터</span>
+        </div>
+        <label class="search-box">
+          <span class="sr-only">주민 이름</span>
+          <input
+            id="searchInput"
+            type="search"
+            autocomplete="off"
+            placeholder="예: 쭈니, 잭슨, Raymond"
+          />
+        </label>
+        <div id="searchResults" class="villager-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="owned-panel" aria-labelledby="owned-title">
+        <div class="section-heading">
+          <h2 id="owned-title">내가 보유한 주민</h2>
+          <span id="ownedCount" class="status-pill">0명</span>
+        </div>
+        <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <template id="villagerCardTemplate">
+      <article class="villager-card">
+        <img class="villager-image" alt="" loading="lazy" />
+        <div class="villager-info">
+          <div class="name-row">
+            <h3></h3>
+            <button class="add-button" type="button">추가</button>
+          </div>
+          <dl>
+            <div>
+              <dt>성별</dt>
+              <dd data-field="gender"></dd>
+            </div>
+            <div>
+              <dt>성격</dt>
+              <dd data-field="personality"></dd>
+            </div>
+            <div>
+              <dt>말버릇</dt>
+              <dd data-field="catchphrase"></dd>
+            </div>
+            <div>
+              <dt>생일</dt>
+              <dd data-field="birthday"></dd>
+            </div>
+          </dl>
+        </div>
+      </article>
+    </template>
+
+    <script src="./villagers-data.js"></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
