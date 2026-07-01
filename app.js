@@ -4,6 +4,8 @@ const state = {
   villagers: Array.isArray(window.ACNH_VILLAGERS) ? window.ACNH_VILLAGERS : [],
   ownedIds: new Set(),
   query: "",
+  currentView: "search",
+  menuOpen: false,
 };
 
 const els = {
@@ -13,6 +15,13 @@ const els = {
   searchResults: document.querySelector("#searchResults"),
   ownedVillagers: document.querySelector("#ownedVillagers"),
   template: document.querySelector("#villagerCardTemplate"),
+  searchView: document.querySelector("#searchView"),
+  ownedView: document.querySelector("#ownedView"),
+  sidebar: document.querySelector("#sidebar"),
+  sidebarBackdrop: document.querySelector("#sidebarBackdrop"),
+  menuOpenButton: document.querySelector("#menuOpenButton"),
+  menuCloseButton: document.querySelector("#menuCloseButton"),
+  sidebarLinks: document.querySelectorAll(".sidebar-link"),
 };
 
 const fallbackImage =
@@ -148,6 +157,8 @@ function renderOwned() {
     item.className = "owned-item";
 
     const image = document.createElement("img");
+    image.width = 48;
+    image.height = 48;
     image.src = villager.image;
     image.alt = `${villager.name} 이미지`;
     image.loading = "lazy";
@@ -186,10 +197,58 @@ function render() {
   renderOwned();
 }
 
+function setMenuOpen(open) {
+  state.menuOpen = open;
+  document.body.classList.toggle("menu-open", open);
+  els.sidebar.classList.toggle("is-open", open);
+  els.sidebar.setAttribute("aria-hidden", open ? "false" : "true");
+  els.menuOpenButton.setAttribute("aria-expanded", open ? "true" : "false");
+  els.sidebarBackdrop.classList.toggle("is-visible", open);
+}
+
+function setView(view) {
+  if (view !== "search" && view !== "owned") {
+    view = "search";
+  }
+
+  state.currentView = view;
+  els.searchView.hidden = view !== "search";
+  els.ownedView.hidden = view !== "owned";
+
+  els.sidebarLinks.forEach((link) => {
+    link.classList.toggle("is-active", link.dataset.view === view);
+  });
+
+  const hash = view === "owned" ? "#owned" : "#search";
+  if (location.hash !== hash) {
+    history.replaceState(null, "", hash);
+  }
+}
+
+function readViewFromHash() {
+  return location.hash === "#owned" ? "owned" : "search";
+}
+
 els.searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderSearchResults();
 });
 
+els.menuOpenButton.addEventListener("click", () => setMenuOpen(true));
+els.menuCloseButton.addEventListener("click", () => setMenuOpen(false));
+els.sidebarBackdrop.addEventListener("click", () => setMenuOpen(false));
+
+els.sidebarLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    setView(link.dataset.view);
+    setMenuOpen(false);
+  });
+});
+
+window.addEventListener("hashchange", () => {
+  setView(readViewFromHash());
+});
+
 loadOwned();
+setView(readViewFromHash());
 render();
