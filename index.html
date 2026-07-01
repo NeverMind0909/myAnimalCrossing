@@ -3,29 +3,79 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>모동숲 주민 관리</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+    <aside id="sidebar" class="sidebar" aria-hidden="true" aria-label="메뉴">
+      <div class="sidebar-header">
+        <p class="sidebar-label">메뉴</p>
+        <button
+          id="menuCloseButton"
+          class="menu-close-button"
+          type="button"
+          aria-label="메뉴 닫기"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="주요 메뉴">
+        <button
+          class="sidebar-link is-active"
+          type="button"
+          data-view="search"
+        >
+          주민 검색
+        </button>
+        <button class="sidebar-link" type="button" data-view="owned">
+          우리 섬 주민
+        </button>
+      </nav>
+
+      <a
+        class="turnip-link sidebar-turnip-link"
+        href="https://turnipprophet.io/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        무값 예측기
+      </a>
+    </aside>
+
     <main class="app-shell">
       <header class="topbar">
+        <button
+          id="menuOpenButton"
+          class="menu-button"
+          type="button"
+          aria-label="메뉴 열기"
+          aria-controls="sidebar"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+
         <div class="topbar-brand">
           <h1 class="site-title">
             <img src="./Title.png" alt="Animal Crossing: New Horizons 주민 관리" />
           </h1>
         </div>
-        <a
-          class="turnip-link"
-          href="https://turnipprophet.io/"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Turnip Prophet 무값 예측기 열기"
-        >
-          무값 예측기
-        </a>
       </header>
 
-      <section class="search-panel" aria-labelledby="search-title">
+      <section
+        id="searchView"
+        class="view-panel search-panel"
+        data-view="search"
+        aria-labelledby="search-title"
+      >
         <div class="section-heading">
           <h2 id="search-title">주민 검색</h2>
           <span id="dataStatus" class="status-pill">로컬 데이터</span>
@@ -37,14 +87,21 @@
             type="search"
             autocomplete="off"
             placeholder="예: 쭈니, 잭슨, Raymond"
+            enterkeyhint="search"
           />
         </label>
         <div id="searchResults" class="villager-grid" aria-live="polite"></div>
       </section>
 
-      <section class="owned-panel" aria-labelledby="owned-title">
+      <section
+        id="ownedView"
+        class="view-panel owned-panel"
+        data-view="owned"
+        aria-labelledby="owned-title"
+        hidden
+      >
         <div class="section-heading">
-          <h2 id="owned-title">내가 보유한 주민</h2>
+          <h2 id="owned-title">우리 섬 주민</h2>
           <span id="ownedCount" class="status-pill">0명</span>
         </div>
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
