@@ -1,9 +1,89 @@
+﻿const BASE_DATA_API_URL = "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/villagers.json";
+const NOOKIPEDIA_API_URL = "https://nookipedia.com/w/api.php";
 const OWNED_KEY = "acnh-owned-villagers-v2";
-const API_URL = "https://raw.githubusercontent.com/NeverMind0909/myAnimalCrossing/main/villagers.json";
+const DATA_CACHE_KEY = "acnh-villagers-api-cache-v5";
+const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v5";
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+
+const EXTRA_VILLAGER_TITLES = [
+  "Ace",
+  "Azalea",
+  "Cephalobot",
+  "Chabwick",
+  "Faith",
+  "Frett",
+  "Ione",
+  "Marlo",
+  "Petri",
+  "Quinn",
+  "Rio",
+  "Roswell",
+  "Sasha",
+  "Shino",
+  "Tiansheng",
+  "Zoe",
+  "Rilla",
+  "Marty",
+  "Étoile",
+  "Chai",
+  "Chelsea",
+  "Toby",
+];
+
+const personalityKo = {
+  Cranky: "무뚝뚝",
+  Jock: "운동광",
+  Lazy: "먹보",
+  Normal: "친절함",
+  Peppy: "아이돌",
+  Sisterly: "단순활발",
+  Uchi: "단순활발",
+  "Big sister": "단순활발",
+  Smug: "느끼함",
+  Snooty: "성숙함",
+};
+
+const genderKo = {
+  Male: "남성",
+  Female: "여성",
+};
+
+const fallbackVillagers = [
+  {
+    id: "fallback-raymond",
+    name: "잭슨",
+    englishName: "Raymond",
+    image: "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/images/villagers/cat23.png",
+    gender: "남성",
+    personality: "느끼함",
+    catchphrase: "크르릉",
+    birthday: "10월 1일",
+  },
+  {
+    id: "fallback-marshal",
+    name: "쭈니",
+    englishName: "Marshal",
+    image: "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/images/villagers/squ17.png",
+    gender: "남성",
+    personality: "느끼함",
+    catchphrase: "어차피",
+    birthday: "9월 29일",
+  },
+  {
+    id: "fallback-sasha",
+    name: "미첼",
+    englishName: "Sasha",
+    image: "https://nookipedia.com/wiki/Special:Redirect/file/Sasha%20amiibo.png",
+    gender: "남성",
+    personality: "먹보",
+    catchphrase: "동글",
+    birthday: "5월 19일",
+  },
+];
 
 const state = {
   villagers: [],
-  dataSource: "로딩 중...",
+  dataSource: "API 준비 중",
   ownedIds: new Set(),
   query: "",
   currentView: "search",
@@ -49,6 +129,131 @@ function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getLocalizedName(nameObject) {
+  return nameObject?.["name-KRko"] || nameObject?.["name-USen"] || "이름 없음";
+}
+
+function toKoreanBirthday(rawBirthday) {
+  if (!rawBirthday) return "알 수 없음";
+  const parts = String(rawBirthday).split("/");
+  if (parts.length !== 2) return rawBirthday;
+
+  const day = Number(parts[0]);
+  const month = Number(parts[1]);
+  return day && month ? `${month}월 ${day}일` : rawBirthday;
+}
+
+function normalizeBaseVillager(raw) {
+  if (raw.name && raw.englishName && raw.image) return raw;
+
+  const fileName = raw["file-name"] || raw.id;
+  return {
+    id: String(fileName || raw.id),
+    name: getLocalizedName(raw.name),
+    englishName: raw.name?.["name-USen"] || "",
+    image: fileName
+      ? `https://raw.githubusercontent.com/alexislours/ACNHAPI/master/images/villagers/${fileName}.png`
+      : raw.image_uri || raw.icon_uri || "",
+    gender: genderKo[raw.gender] || raw.gender || "알 수 없음",
+    personality: personalityKo[raw.personality] || raw.personality || "알 수 없음",
+    catchphrase:
+      raw["catch-translations"]?.["catch-KRko"] || raw["catch-phrase"] || "알 수 없음",
+    birthday: toKoreanBirthday(raw.birthday) || raw["birthday-string"] || "알 수 없음",
+  };
+}
+
+function normalizeBaseVillagers(apiData) {
+  const values = Array.isArray(apiData) ? apiData : Object.values(apiData);
+  return values
+    .map(normalizeBaseVillager)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+}
+
+function getWikiField(content, fieldName) {
+  const pattern = new RegExp(`^\\|\\s*${fieldName}\\s*=\\s*(.+?)\\s*$`, "im");
+  return content.match(pattern)?.[1]?.trim() || "";
+}
+
+function toWikiImageUrl(fileName) {
+  return `https://nookipedia.com/wiki/Special:Redirect/file/${encodeURIComponent(fileName)}`;
+}
+
+function toKoreanBirthdayFromWiki(monthName, dayValue) {
+  const months = {
+    January: 1,
+    February: 2,
+    March: 3,
+    April: 4,
+    May: 5,
+    June: 6,
+    July: 7,
+    August: 8,
+    September: 9,
+    October: 10,
+    November: 11,
+    December: 12,
+  };
+  const month = months[monthName];
+  const day = Number(dayValue);
+  return month && day ? `${month}월 ${day}일` : "알 수 없음";
+}
+
+function normalizeNookipediaVillager(title, content) {
+  const englishName = getWikiField(content, "name") || title;
+  const imageFile = getWikiField(content, "image");
+  return {
+    id: `nookipedia-${englishName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    name: getWikiField(content, "ko-name") || englishName,
+    englishName,
+    image: imageFile ? toWikiImageUrl(imageFile) : "",
+    gender: genderKo[getWikiField(content, "gender")] || getWikiField(content, "gender") || "알 수 없음",
+    personality:
+      personalityKo[getWikiField(content, "personality")] ||
+      getWikiField(content, "personality") ||
+      "알 수 없음",
+    catchphrase: getWikiField(content, "ko-phrase") || getWikiField(content, "phrase") || "알 수 없음",
+    birthday: toKoreanBirthdayFromWiki(
+      getWikiField(content, "birthdaymonth"),
+      getWikiField(content, "birthday"),
+    ),
+  };
+}
+
+async function fetchNookipediaVillager(title) {
+  const params = new URLSearchParams({
+    action: "query",
+    prop: "revisions",
+    titles: title,
+    rvprop: "content",
+    format: "json",
+    formatversion: "2",
+    origin: "*",
+  });
+  const response = await fetch(`${NOOKIPEDIA_API_URL}?${params}`);
+  if (!response.ok) throw new Error(`Nookipedia API failed: ${response.status}`);
+
+  const data = await response.json();
+  const page = data.query?.pages?.[0];
+  const content = page?.revisions?.[0]?.content;
+  if (!content || page.missing) throw new Error(`Nookipedia page missing: ${title}`);
+  return normalizeNookipediaVillager(title, content);
+}
+
+async function fetchExtraVillagers() {
+  const results = await Promise.allSettled(EXTRA_VILLAGER_TITLES.map(fetchNookipediaVillager));
+  return results
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+}
+
+function mergeVillagers(baseVillagers, extraVillagers) {
+  const byEnglishName = new Map();
+  [...baseVillagers, ...extraVillagers].forEach((villager) => {
+    byEnglishName.set(villager.englishName.toLocaleLowerCase(), villager);
+  });
+  return [...byEnglishName.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+}
+
 function loadOwned() {
   const owned = readJson(OWNED_KEY, []);
   state.ownedIds = new Set(owned.map(String));
@@ -92,12 +297,9 @@ function createVillagerCard(villager) {
     : villager.name;
 
   fragment.querySelector('[data-field="gender"]').textContent = villager.gender;
-  fragment.querySelector('[data-field="personality"]').textContent =
-    villager.personality;
-  fragment.querySelector('[data-field="catchphrase"]').textContent =
-    villager.catchphrase;
-  fragment.querySelector('[data-field="birthday"]').textContent =
-    villager.birthday;
+  fragment.querySelector('[data-field="personality"]').textContent = villager.personality;
+  fragment.querySelector('[data-field="catchphrase"]').textContent = villager.catchphrase;
+  fragment.querySelector('[data-field="birthday"]').textContent = villager.birthday;
 
   const isOwned = state.ownedIds.has(villager.id);
   button.textContent = isOwned ? "보유 중" : "추가";
@@ -119,7 +321,7 @@ function renderSearchResults() {
   if (!state.villagers.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "주민 데이터 파일을 읽지 못했습니다.";
+    empty.textContent = "주민 데이터를 불러오는 중입니다.";
     els.searchResults.append(empty);
     return;
   }
@@ -199,6 +401,22 @@ function render() {
   renderOwned();
 }
 
+function setVillagers(villagers, dataSource) {
+  state.villagers = villagers;
+  state.dataSource = dataSource;
+  render();
+}
+
+function loadCachedVillagers() {
+  const cached = readJson(DATA_CACHE_KEY, []);
+  const cachedAt = Number(localStorage.getItem(DATA_CACHE_TIME_KEY) || 0);
+  if (!Array.isArray(cached) || !cached.length) return false;
+
+  const isFresh = Date.now() - cachedAt < CACHE_TTL_MS;
+  setVillagers(cached, `${cached.length}명 캐시`);
+  return isFresh;
+}
+
 function setMenuOpen(open) {
   state.menuOpen = open;
   document.body.classList.toggle("menu-open", open);
@@ -231,6 +449,46 @@ function readViewFromHash() {
   return location.hash === "#owned" ? "owned" : "search";
 }
 
+async function fetchBaseVillagers() {
+  const response = await fetch(BASE_DATA_API_URL, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Base API failed: ${response.status}`);
+  return normalizeBaseVillagers(await response.json());
+}
+
+async function fetchLocalVillagers() {
+  const response = await fetch("./villagers.json", { cache: "no-store" });
+  if (!response.ok) throw new Error("Local fallback response not ok");
+  return normalizeBaseVillagers(await response.json());
+}
+
+async function loadVillagers() {
+  if (loadCachedVillagers()) return;
+
+  try {
+    const baseVillagers = await fetchBaseVillagers();
+    setVillagers(baseVillagers, `${baseVillagers.length}명 API`);
+
+    const extraVillagers = await fetchExtraVillagers();
+    const villagers = mergeVillagers(baseVillagers, extraVillagers);
+    writeJson(DATA_CACHE_KEY, villagers);
+    localStorage.setItem(DATA_CACHE_TIME_KEY, String(Date.now()));
+
+    const status = extraVillagers.length === EXTRA_VILLAGER_TITLES.length
+      ? `${villagers.length}명 API`
+      : `${villagers.length}명 API 일부`;
+    setVillagers(villagers, status);
+  } catch (error) {
+    console.error("External API load failed, trying local fallback:", error);
+    try {
+      const localVillagers = await fetchLocalVillagers();
+      setVillagers(localVillagers, `${localVillagers.length}명 로컬 JSON`);
+    } catch (fallbackError) {
+      console.error("Fallback load failed:", fallbackError);
+      setVillagers(fallbackVillagers, "샘플 데이터");
+    }
+  }
+}
+
 els.searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderSearchResults();
@@ -251,30 +509,11 @@ window.addEventListener("hashchange", () => {
   setView(readViewFromHash());
 });
 
-async function init() {
+function init() {
   loadOwned();
   setView(readViewFromHash());
   render();
-
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error("API response not ok");
-    state.villagers = await response.json();
-    state.dataSource = `${state.villagers.length}명 API`;
-  } catch (error) {
-    console.error("External API load failed, trying local fallback:", error);
-    try {
-      const response = await fetch("./villagers.json");
-      if (!response.ok) throw new Error("Local fallback response not ok");
-      state.villagers = await response.json();
-      state.dataSource = `${state.villagers.length}명 (로컬 JSON)`;
-    } catch (fallbackError) {
-      console.error("Fallback load failed:", fallbackError);
-      state.dataSource = "데이터 로드 실패";
-    }
-  } finally {
-    render();
-  }
+  loadVillagers();
 }
 
 init();

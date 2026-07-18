@@ -1,28 +1,25 @@
-# 모동숲 주민 관리
+﻿# 모동숲 주민 관리
 
 아이폰 브라우저에서도 사용할 수 있는 정적 HTML 앱입니다.
 
 ## 실행
 
-`index.html`을 브라우저로 열면 됩니다. 서버 없이 파일을 직접 열어도 동작하도록 주민 데이터를 `villagers-data.js`에 넣었습니다.
-
-## 친구에게 공유하기
-
-카카오톡으로 `index.html`, `styles.css`, `app.js`, `villagers-data.js`를 각각 보내면 아이폰에서 같은 폴더 구조로 열기 어렵습니다. 가장 쉬운 방식은 GitHub Pages, Netlify, Vercel 같은 정적 호스팅에 올린 뒤 URL 하나만 카카오톡으로 보내는 것입니다.
-
-파일로만 보내야 한다면 ZIP으로 묶어 보낼 수는 있지만, 아이폰에서 압축을 풀고 HTML을 여는 과정이 번거롭습니다. 카카오톡 공유 목적이면 URL 배포를 추천합니다.
-
-## 저장 방식
-
-- 내가 보유한 주민 목록: `localStorage`
-- 주민 검색 데이터: 로컬 스크립트 파일
+`index.html`을 브라우저로 열면 됩니다. 주민 데이터는 실행 시 원격 API에서 받아오고, 받아온 데이터는 `localStorage`에 하루 동안 캐시합니다.
 
 ## 데이터 방식
 
-기존 `acnhapi.com` 런타임 호출은 현재 JSON 대신 HTML 리다이렉트 응답을 돌려주는 경우가 있어 제거했습니다. 앱이 안정적으로 열리도록 주민 데이터를 로컬 파일에 포함했습니다.
+- 기본 391명: `alexislours/ACNHAPI`의 `villagers.json`
+- 2.0/Sanrio 추가 22명: Nookipedia MediaWiki API의 각 주민 페이지 위키텍스트
+- 이미지: 기본 주민은 `alexislours/ACNHAPI`, 추가 주민은 Nookipedia 파일 리다이렉트
+- 내가 보유한 주민 목록: `localStorage`
+- API 실패 시: 마지막 캐시를 사용하고, 캐시도 없으면 로컬 `villagers.json`, 그것도 실패하면 샘플 데이터로 동작합니다.
 
-현재 데이터는 `alexislours/ACNHAPI`의 주민 JSON 391명에 ACNH 2.0 및 Sanrio 추가 주민 22명을 더해 총 413명입니다. 이미지 파일은 앱 용량을 줄이기 위해 외부 이미지 URL을 사용합니다.
+정상 로딩되면 총 413명이 표시됩니다.
+
+## 친구에게 공유하기
+
+카카오톡으로 쉽게 공유하려면 GitHub Pages, Netlify, Vercel 같은 정적 호스팅에 올린 뒤 URL 하나를 보내는 것을 추천합니다.
 
 ## 무값 예측기
 
-상단의 `무값 예측기` 버튼은 커뮤니티에서 널리 쓰이는 Turnip Prophet으로 연결됩니다.
+상단의 `무값 예측기` 버튼은 Turnip Prophet으로 연결됩니다.
