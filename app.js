@@ -1,6 +1,7 @@
 ﻿const BASE_DATA_API_URL = "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/villagers.json";
 const NOOKIPEDIA_API_URL = "https://nookipedia.com/w/api.php";
 const OWNED_KEY = "acnh-owned-villagers-by-island-v1";
+const WISHLIST_KEY = "acnh-wishlist-by-island-v1";
 const LEGACY_OWNED_KEY = "acnh-owned-villagers-v2";
 const AUTH_KEY = "acnh-login-id-v1";
 const DATA_CACHE_KEY = "acnh-villagers-api-cache-v5";
@@ -15,6 +16,7 @@ const ISLAND_LABELS = {
   kongboki: "콩보키섬 주민",
   kongsolki: "콩솔키섬 주민",
 };
+const SYNC_CONFIG = window.ACNH_SYNC_CONFIG || {};
 
 const EXTRA_VILLAGER_TITLES = [
   "Ace",
@@ -96,6 +98,10 @@ const state = {
   villagers: [],
   dataSource: "API 준비 중",
   ownedByIsland: {
+    kongboki: new Set(),
+    kongsolki: new Set(),
+  },
+  wishlistByIsland: {
     kongboki: new Set(),
     kongsolki: new Set(),
   },
@@ -281,6 +287,30 @@ function normalizeIdList(value) {
   return Array.isArray(value) ? [...new Set(value.map(String))] : [];
 }
 
+function createEmptyIslandSets() {
+  return {
+    kongboki: new Set(),
+    kongsolki: new Set(),
+  };
+}
+
+function serializeIslandSets(islandSets) {
+  return {
+    kongboki: [...(islandSets.kongboki || new Set())],
+    kongsolki: [...(islandSets.kongsolki || new Set())],
+  };
+}
+
+function toIslandSets(value) {
+  const sets = createEmptyIslandSets();
+  if (!value || typeof value !== "object" || Array.isArray(value)) return sets;
+
+  Object.keys(ISLAND_LABELS).forEach((island) => {
+    sets[island] = new Set(normalizeIdList(value[island]));
+  });
+  return sets;
+}
+
 function areSameIds(left, right) {
   if (left.length !== right.length) return false;
   const rightIds = new Set(right);
@@ -324,11 +354,73 @@ function loadOwned() {
   if (shouldSave) saveOwned();
 }
 
+function saveLocalSharedState() {
+  writeJson(OWNED_KEY, serializeIslandSets(state.ownedByIsland));
+  writeJson(WISHLIST_KEY, serializeIslandSets(state.wishlistByIsland));
+}
+
 function saveOwned() {
-  writeJson(OWNED_KEY, {
-    kongboki: [...state.ownedByIsland.kongboki],
-    kongsolki: [...state.ownedByIsland.kongsolki],
-  });
+  saveLocalSharedState();
+  syncSharedState();
+}
+
+function loadWishlist() {
+  state.wishlistByIsland = toIslandSets(readJson(WISHLIST_KEY, null));
+}
+
+function getRemoteUrl() {
+  return String(SYNC_CONFIG.url || "").trim();
+}
+
+function getRemoteHeaders() {
+  return Object.assign({ "Content-Type": "application/json" }, SYNC_CONFIG.headers || {});
+}
+
+function getSharedState() {
+  return {
+    owned: serializeIslandSets(state.ownedByIsland),
+    wishlist: serializeIslandSets(state.wishlistByIsland),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function applySharedState(data) {
+  if (!data || typeof data !== "object") return;
+  state.ownedByIsland = toIslandSets(data.owned || data.ownedByIsland);
+  state.wishlistByIsland = toIslandSets(data.wishlist || data.wishlistByIsland);
+  saveLocalSharedState();
+  render();
+}
+
+async function loadRemoteSharedState() {
+  const url = getRemoteUrl();
+  if (!url) return;
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: getRemoteHeaders(),
+    });
+    if (!response.ok) throw new Error(`Sync load failed: ${response.status}`);
+    applySharedState(await response.json());
+  } catch (error) {
+    console.warn("Remote sync load failed:", error);
+  }
+}
+
+async function syncSharedState() {
+  const url = getRemoteUrl();
+  if (!url) return;
+
+  try {
+    await fetch(url, {
+      method: SYNC_CONFIG.method || "PUT",
+      headers: getRemoteHeaders(),
+      body: JSON.stringify(getSharedState()),
+    });
+  } catch (error) {
+    console.warn("Remote sync save failed:", error);
+  }
 }
 
 function getLoginIsland() {
@@ -343,8 +435,16 @@ function getIslandOwnedIds(island = state.currentIsland) {
   return state.ownedByIsland[island] || new Set();
 }
 
-function getVillagerIslands(villagerId) {
+function getIslandWishlistIds(island = state.currentIsland) {
+  return state.wishlistByIsland[island] || new Set();
+}
+
+function getVillagerOwnedIslands(villagerId) {
   return Object.keys(ISLAND_LABELS).filter((island) => getIslandOwnedIds(island).has(villagerId));
+}
+
+function getVillagerWishlistIslands(villagerId) {
+  return Object.keys(ISLAND_LABELS).filter((island) => getIslandWishlistIds(island).has(villagerId));
 }
 function loadLogin() {
   const savedId = String(readJson(AUTH_KEY, "")).trim();
@@ -397,11 +497,19 @@ function createOwnershipMarks(villagerId) {
   const marks = document.createElement("div");
   marks.className = "owner-marks";
 
-  getVillagerIslands(villagerId).forEach((island) => {
+  getVillagerOwnedIslands(villagerId).forEach((island) => {
     const mark = document.createElement("span");
-    mark.className = `owner-mark owner-mark-${island}`;
-    mark.textContent = island === "kongboki" ? "콩보키" : "콩솔키";
-    mark.title = `${ISLAND_LABELS[island]} 찜`;
+    mark.className = `owner-mark resident-mark owner-mark-${island}`;
+    mark.textContent = `${ISLAND_LABELS[island].replace(" 주민", "")} 주민`;
+    mark.title = `${ISLAND_LABELS[island]} 등록됨`;
+    marks.append(mark);
+  });
+
+  getVillagerWishlistIslands(villagerId).forEach((island) => {
+    const mark = document.createElement("span");
+    mark.className = `owner-mark wishlist-mark owner-mark-${island}`;
+    mark.textContent = `${island === "kongboki" ? "콩보키" : "콩솔키"} 찜`;
+    mark.title = `${ISLAND_LABELS[island]} 위시리스트`;
     marks.append(mark);
   });
 
@@ -421,9 +529,13 @@ function createVillagerCard(villager) {
   const image = fragment.querySelector(".villager-image");
   const title = fragment.querySelector("h3");
   const button = fragment.querySelector(".add-button");
+  const favoriteButton = document.createElement("button");
   const loginIsland = getLoginIsland();
   const loginIslandOwnedIds = loginIsland ? getIslandOwnedIds(loginIsland) : new Set();
+  const loginWishlistIds = loginIsland ? getIslandWishlistIds(loginIsland) : new Set();
   const isOwnedByLogin = loginIslandOwnedIds.has(villager.id);
+  const isWishlistedByLogin = loginWishlistIds.has(villager.id);
+  const ownedIslands = getVillagerOwnedIslands(villager.id);
 
   image.src = villager.image;
   image.alt = `${villager.name} 이미지`;
@@ -440,18 +552,46 @@ function createVillagerCard(villager) {
   fragment.querySelector('[data-field="catchphrase"]').textContent = villager.catchphrase;
   fragment.querySelector('[data-field="birthday"]').textContent = villager.birthday;
 
+  if (ownedIslands.length) {
+    card.classList.add("is-resident");
+    ownedIslands.forEach((island) => card.classList.add(`is-resident-${island}`));
+  }
+
   button.textContent = !loginIsland
     ? "로그인 필요"
     : isOwnedByLogin
-      ? "찜 완료"
+      ? "섬 주민"
       : `${ISLAND_LABELS[loginIsland].replace(" 주민", "")}에 추가`;
   button.disabled = !loginIsland || isOwnedByLogin;
+
+  favoriteButton.className = "favorite-button";
+  favoriteButton.type = "button";
+  favoriteButton.textContent = !loginIsland ? "찜 로그인" : isWishlistedByLogin ? "찜 해제" : "찜하기";
+  favoriteButton.disabled = !loginIsland;
+  button.after(favoriteButton);
+
   button.addEventListener("click", () => {
     if (!loginIsland) {
       openLoginModal();
       return;
     }
     getIslandOwnedIds(loginIsland).add(villager.id);
+    getIslandWishlistIds(loginIsland).delete(villager.id);
+    saveOwned();
+    render();
+  });
+
+  favoriteButton.addEventListener("click", () => {
+    if (!loginIsland) {
+      openLoginModal();
+      return;
+    }
+    const wishlistIds = getIslandWishlistIds(loginIsland);
+    if (wishlistIds.has(villager.id)) {
+      wishlistIds.delete(villager.id);
+    } else {
+      wishlistIds.add(villager.id);
+    }
     saveOwned();
     render();
   });
@@ -459,6 +599,7 @@ function createVillagerCard(villager) {
   card.dataset.id = villager.id;
   return fragment;
 }
+
 function renderSearchResults() {
   const results = getSearchResults();
   els.searchResults.replaceChildren();
@@ -549,7 +690,8 @@ function renderOwned() {
   els.ownedVillagers.append(fragment);
 }
 function render() {
-  els.dataStatus.textContent = state.dataSource;
+  els.dataStatus.textContent = "";
+  els.dataStatus.hidden = true;
   renderSearchResults();
   renderOwned();
 }
@@ -566,7 +708,7 @@ function loadCachedVillagers() {
   if (!Array.isArray(cached) || !cached.length) return false;
 
   const isFresh = Date.now() - cachedAt < CACHE_TTL_MS;
-  setVillagers(cached, `${cached.length}명 캐시`);
+  setVillagers(cached, "");
   return isFresh;
 }
 
@@ -634,22 +776,19 @@ async function loadVillagers() {
 
   try {
     const baseVillagers = await fetchBaseVillagers();
-    setVillagers(baseVillagers, `${baseVillagers.length}명 API`);
+    setVillagers(baseVillagers, "");
 
     const extraVillagers = await fetchExtraVillagers();
     const villagers = mergeVillagers(baseVillagers, extraVillagers);
     writeJson(DATA_CACHE_KEY, villagers);
     localStorage.setItem(DATA_CACHE_TIME_KEY, String(Date.now()));
 
-    const status = extraVillagers.length === EXTRA_VILLAGER_TITLES.length
-      ? `${villagers.length}명 API`
-      : `${villagers.length}명 API 일부`;
-    setVillagers(villagers, status);
+    setVillagers(villagers, "");
   } catch (error) {
     console.error("External API load failed, trying local fallback:", error);
     try {
       const localVillagers = await fetchLocalVillagers();
-      setVillagers(localVillagers, `${localVillagers.length}명 로컬 JSON`);
+      setVillagers(localVillagers, "");
     } catch (fallbackError) {
       console.error("Fallback load failed:", fallbackError);
       setVillagers(fallbackVillagers, "샘플 데이터");
@@ -697,11 +836,13 @@ window.addEventListener("hashchange", () => {
 
 function init() {
   loadOwned();
+  loadWishlist();
   loadLogin();
   const route = readViewFromHash();
   setView(route.view, route.island);
   render();
   loadVillagers();
+  loadRemoteSharedState();
 }
 
 init();
