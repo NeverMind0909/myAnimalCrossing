@@ -112,19 +112,25 @@
         >
           주민 검색
         </button>
-        <button class="sidebar-link" type="button" data-view="owned">
-          우리 섬 주민
+        <button class="sidebar-link" type="button" data-view="island" data-island="kongboki">
+          콩보키섬 주민
+        </button>
+        <button class="sidebar-link" type="button" data-view="island" data-island="kongsolki">
+          콩솔키섬 주민
         </button>
       </nav>
 
-      <a
-        class="turnip-link sidebar-turnip-link"
-        href="https://turnipprophet.io/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        무값 예측기
-      </a>
+      <div class="sidebar-actions">
+        <button id="loginButton" class="login-button" type="button">로그인</button>
+        <a
+          class="turnip-link sidebar-turnip-link"
+          href="https://turnipprophet.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          무값 예측기
+        </a>
+      </div>
     </aside>
 
     <main class="app-shell">
@@ -177,17 +183,36 @@
       <section
         id="ownedView"
         class="view-panel owned-panel"
-        data-view="owned"
+        data-view="island"
         aria-labelledby="owned-title"
         hidden
       >
         <div class="section-heading">
-          <h2 id="owned-title">우리 섬 주민</h2>
+          <h2 id="owned-title">콩보키섬 주민</h2>
           <span id="ownedCount" class="status-pill">0명</span>
         </div>
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
       </section>
     </main>
+
+    <div id="loginModal" class="modal-backdrop" hidden>
+      <form id="loginForm" class="login-modal" aria-labelledby="loginTitle">
+        <div class="login-modal-header">
+          <h2 id="loginTitle">로그인</h2>
+          <button id="loginCancelButton" class="modal-close-button" type="button" aria-label="로그인 닫기">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <label class="login-field">
+          <span>아이디</span>
+          <input id="loginInput" type="text" autocomplete="username" placeholder="아이디 입력" />
+        </label>
+        <p id="loginError" class="login-error" aria-live="polite"></p>
+        <button class="login-submit-button" type="submit">확인</button>
+      </form>
+    </div>
 
     <template id="villagerCardTemplate">
       <article class="villager-card">
@@ -222,4 +247,3 @@
     <script src="./app.js" defer></script>
   </body>
 </html>
-

@@ -1,9 +1,20 @@
 ﻿const BASE_DATA_API_URL = "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/villagers.json";
 const NOOKIPEDIA_API_URL = "https://nookipedia.com/w/api.php";
-const OWNED_KEY = "acnh-owned-villagers-v2";
+const OWNED_KEY = "acnh-owned-villagers-by-island-v1";
+const LEGACY_OWNED_KEY = "acnh-owned-villagers-v2";
+const AUTH_KEY = "acnh-login-id-v1";
 const DATA_CACHE_KEY = "acnh-villagers-api-cache-v5";
 const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v5";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+const ACCOUNT_ISLANDS = {
+  "0726": "kongboki",
+  "250726": "kongsolki",
+};
+const ALLOWED_LOGIN_IDS = Object.keys(ACCOUNT_ISLANDS);
+const ISLAND_LABELS = {
+  kongboki: "콩보키섬 주민",
+  kongsolki: "콩솔키섬 주민",
+};
 
 const EXTRA_VILLAGER_TITLES = [
   "Ace",
@@ -84,9 +95,14 @@ const fallbackVillagers = [
 const state = {
   villagers: [],
   dataSource: "API 준비 중",
-  ownedIds: new Set(),
+  ownedByIsland: {
+    kongboki: new Set(),
+    kongsolki: new Set(),
+  },
   query: "",
   currentView: "search",
+  currentIsland: "kongboki",
+  loginId: "",
   menuOpen: false,
 };
 
@@ -96,6 +112,7 @@ const els = {
   searchInput: document.querySelector("#searchInput"),
   searchResults: document.querySelector("#searchResults"),
   ownedVillagers: document.querySelector("#ownedVillagers"),
+  ownedTitle: document.querySelector("#owned-title"),
   template: document.querySelector("#villagerCardTemplate"),
   searchView: document.querySelector("#searchView"),
   ownedView: document.querySelector("#ownedView"),
@@ -103,6 +120,12 @@ const els = {
   sidebarBackdrop: document.querySelector("#sidebarBackdrop"),
   menuOpenButton: document.querySelector("#menuOpenButton"),
   menuCloseButton: document.querySelector("#menuCloseButton"),
+  loginButton: document.querySelector("#loginButton"),
+  loginModal: document.querySelector("#loginModal"),
+  loginForm: document.querySelector("#loginForm"),
+  loginInput: document.querySelector("#loginInput"),
+  loginError: document.querySelector("#loginError"),
+  loginCancelButton: document.querySelector("#loginCancelButton"),
   sidebarLinks: document.querySelectorAll(".sidebar-link"),
 };
 
@@ -255,12 +278,76 @@ function mergeVillagers(baseVillagers, extraVillagers) {
 }
 
 function loadOwned() {
-  const owned = readJson(OWNED_KEY, []);
-  state.ownedIds = new Set(owned.map(String));
+  const owned = readJson(OWNED_KEY, null);
+  const legacyOwned = readJson(LEGACY_OWNED_KEY, []);
+
+  state.ownedByIsland = {
+    kongboki: new Set(),
+    kongsolki: new Set(),
+  };
+
+  if (owned && typeof owned === "object" && !Array.isArray(owned)) {
+    Object.keys(ISLAND_LABELS).forEach((island) => {
+      state.ownedByIsland[island] = new Set((owned[island] || []).map(String));
+    });
+    return;
+  }
+
+  if (Array.isArray(legacyOwned)) {
+    state.ownedByIsland.kongboki = new Set(legacyOwned.map(String));
+  }
 }
 
 function saveOwned() {
-  writeJson(OWNED_KEY, [...state.ownedIds]);
+  writeJson(OWNED_KEY, {
+    kongboki: [...state.ownedByIsland.kongboki],
+    kongsolki: [...state.ownedByIsland.kongsolki],
+  });
+}
+
+function getLoginIsland() {
+  return ACCOUNT_ISLANDS[state.loginId] || "";
+}
+
+function canEditIsland(island = state.currentIsland) {
+  return getLoginIsland() === island;
+}
+
+function getIslandOwnedIds(island = state.currentIsland) {
+  return state.ownedByIsland[island] || new Set();
+}
+
+function getVillagerIslands(villagerId) {
+  return Object.keys(ISLAND_LABELS).filter((island) => getIslandOwnedIds(island).has(villagerId));
+}
+function loadLogin() {
+  const savedId = readJson(AUTH_KEY, "");
+  state.loginId = ALLOWED_LOGIN_IDS.includes(savedId) ? savedId : "";
+  updateLoginButton();
+}
+
+function saveLogin(id) {
+  state.loginId = id;
+  writeJson(AUTH_KEY, id);
+  updateLoginButton();
+}
+
+function updateLoginButton() {
+  if (!els.loginButton) return;
+  els.loginButton.textContent = state.loginId ? `${state.loginId} 로그인 중` : "로그인";
+}
+
+function openLoginModal() {
+  if (!els.loginModal) return;
+  els.loginModal.hidden = false;
+  els.loginError.textContent = "";
+  els.loginInput.value = state.loginId;
+  setTimeout(() => els.loginInput.focus(), 0);
+}
+
+function closeLoginModal() {
+  if (!els.loginModal) return;
+  els.loginModal.hidden = true;
 }
 
 function normalizeText(value) {
@@ -280,18 +367,44 @@ function getSearchResults() {
   return state.villagers.filter(matchesQuery).slice(0, 36);
 }
 
+function createOwnershipMarks(villagerId) {
+  const marks = document.createElement("div");
+  marks.className = "owner-marks";
+
+  getVillagerIslands(villagerId).forEach((island) => {
+    const mark = document.createElement("span");
+    mark.className = `owner-mark owner-mark-${island}`;
+    mark.textContent = island === "kongboki" ? "콩보키" : "콩솔키";
+    mark.title = `${ISLAND_LABELS[island]} 찜`;
+    marks.append(mark);
+  });
+
+  return marks;
+}
+
+function createPortrait(image, villagerId, className = "villager-portrait") {
+  const portrait = document.createElement("div");
+  portrait.className = className;
+  image.replaceWith(portrait);
+  portrait.append(image, createOwnershipMarks(villagerId));
+}
+
 function createVillagerCard(villager) {
   const fragment = els.template.content.cloneNode(true);
   const card = fragment.querySelector(".villager-card");
   const image = fragment.querySelector(".villager-image");
   const title = fragment.querySelector("h3");
   const button = fragment.querySelector(".add-button");
+  const loginIsland = getLoginIsland();
+  const loginIslandOwnedIds = loginIsland ? getIslandOwnedIds(loginIsland) : new Set();
+  const isOwnedByLogin = loginIslandOwnedIds.has(villager.id);
 
   image.src = villager.image;
   image.alt = `${villager.name} 이미지`;
   image.addEventListener("error", () => {
     image.src = fallbackImage;
   });
+  createPortrait(image, villager.id);
   title.textContent = villager.englishName
     ? `${villager.name} (${villager.englishName})`
     : villager.name;
@@ -301,11 +414,14 @@ function createVillagerCard(villager) {
   fragment.querySelector('[data-field="catchphrase"]').textContent = villager.catchphrase;
   fragment.querySelector('[data-field="birthday"]').textContent = villager.birthday;
 
-  const isOwned = state.ownedIds.has(villager.id);
-  button.textContent = isOwned ? "보유 중" : "추가";
-  button.disabled = isOwned;
+  button.textContent = !loginIsland ? "로그인 필요" : isOwnedByLogin ? "찜 완료" : "추가";
+  button.disabled = !loginIsland || isOwnedByLogin;
   button.addEventListener("click", () => {
-    state.ownedIds.add(villager.id);
+    if (!loginIsland) {
+      openLoginModal();
+      return;
+    }
+    getIslandOwnedIds(loginIsland).add(villager.id);
     saveOwned();
     render();
   });
@@ -313,7 +429,6 @@ function createVillagerCard(villager) {
   card.dataset.id = villager.id;
   return fragment;
 }
-
 function renderSearchResults() {
   const results = getSearchResults();
   els.searchResults.replaceChildren();
@@ -340,7 +455,9 @@ function renderSearchResults() {
 }
 
 function renderOwned() {
-  const ownedVillagers = [...state.ownedIds]
+  const island = state.currentIsland;
+  const editable = canEditIsland(island);
+  const ownedVillagers = [...getIslandOwnedIds(island)]
     .map((id) => state.villagers.find((villager) => villager.id === id))
     .filter(Boolean);
 
@@ -350,7 +467,9 @@ function renderOwned() {
   if (!ownedVillagers.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "검색 결과에서 주민을 추가해 보세요.";
+    empty.textContent = editable
+      ? "검색 결과에서 주민을 추가해 보세요."
+      : "아직 등록된 주민이 없습니다.";
     els.ownedVillagers.append(empty);
     return;
   }
@@ -369,6 +488,9 @@ function renderOwned() {
     image.addEventListener("error", () => {
       image.src = fallbackImage;
     });
+    const portrait = document.createElement("div");
+    portrait.className = "owned-portrait";
+    portrait.append(image, createOwnershipMarks(villager.id));
 
     const meta = document.createElement("div");
     meta.className = "owned-meta";
@@ -381,20 +503,21 @@ function renderOwned() {
     const remove = document.createElement("button");
     remove.className = "remove-button";
     remove.type = "button";
-    remove.textContent = "삭제";
+    remove.textContent = editable ? "삭제" : "조회만";
+    remove.disabled = !editable;
     remove.addEventListener("click", () => {
-      state.ownedIds.delete(villager.id);
+      if (!editable) return;
+      getIslandOwnedIds(island).delete(villager.id);
       saveOwned();
       render();
     });
 
-    item.append(image, meta, remove);
+    item.append(portrait, meta, remove);
     fragment.append(item);
   });
 
   els.ownedVillagers.append(fragment);
 }
-
 function render() {
   els.dataStatus.textContent = state.dataSource;
   renderSearchResults();
@@ -426,27 +549,40 @@ function setMenuOpen(open) {
   els.sidebarBackdrop.classList.toggle("is-visible", open);
 }
 
-function setView(view) {
-  if (view !== "search" && view !== "owned") {
-    view = "search";
+function setView(view, island = state.currentIsland) {
+  if (view === "owned") view = "island";
+  if (view !== "search" && view !== "island") view = "search";
+
+  if (view === "island" && ISLAND_LABELS[island]) {
+    state.currentIsland = island;
   }
 
   state.currentView = view;
   els.searchView.hidden = view !== "search";
-  els.ownedView.hidden = view !== "owned";
+  els.ownedView.hidden = view !== "island";
+  els.ownedTitle.textContent = ISLAND_LABELS[state.currentIsland];
 
   els.sidebarLinks.forEach((link) => {
-    link.classList.toggle("is-active", link.dataset.view === view);
+    const isActive = view === "search"
+      ? link.dataset.view === "search"
+      : link.dataset.view === "island" && link.dataset.island === state.currentIsland;
+    link.classList.toggle("is-active", isActive);
   });
 
-  const hash = view === "owned" ? "#owned" : "#search";
+  const hash = view === "island" ? `#${state.currentIsland}` : "#search";
   if (location.hash !== hash) {
     history.replaceState(null, "", hash);
   }
 }
 
 function readViewFromHash() {
-  return location.hash === "#owned" ? "owned" : "search";
+  if (location.hash === "#kongsolki") {
+    return { view: "island", island: "kongsolki" };
+  }
+  if (location.hash === "#kongboki" || location.hash === "#owned") {
+    return { view: "island", island: "kongboki" };
+  }
+  return { view: "search", island: state.currentIsland };
 }
 
 async function fetchBaseVillagers() {
@@ -500,18 +636,38 @@ els.sidebarBackdrop.addEventListener("click", () => setMenuOpen(false));
 
 els.sidebarLinks.forEach((link) => {
   link.addEventListener("click", () => {
-    setView(link.dataset.view);
+    setView(link.dataset.view, link.dataset.island);
     setMenuOpen(false);
   });
 });
 
+els.loginButton?.addEventListener("click", openLoginModal);
+els.loginCancelButton?.addEventListener("click", closeLoginModal);
+els.loginModal?.addEventListener("click", (event) => {
+  if (event.target === els.loginModal) closeLoginModal();
+});
+els.loginForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const loginId = els.loginInput.value.trim();
+  if (!ALLOWED_LOGIN_IDS.includes(loginId)) {
+    els.loginError.textContent = "그런 계정 없습니다.";
+    return;
+  }
+  saveLogin(loginId);
+  setView("island", getLoginIsland());
+  closeLoginModal();
+});
+
 window.addEventListener("hashchange", () => {
-  setView(readViewFromHash());
+  const route = readViewFromHash();
+  setView(route.view, route.island);
 });
 
 function init() {
   loadOwned();
-  setView(readViewFromHash());
+  loadLogin();
+  const route = readViewFromHash();
+  setView(route.view, route.island);
   render();
   loadVillagers();
 }

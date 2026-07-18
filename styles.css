@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   --phone-width: 393px;
   --sidebar-width: 280px;
@@ -447,4 +447,168 @@ dd {
   .villager-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.sidebar-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.login-button,
+.login-submit-button,
+.modal-close-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0 14px;
+  background: #ffffff;
+  color: var(--leaf-dark);
+  border: 1px solid var(--line);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(24, 34, 26, 0.42);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.login-modal {
+  width: min(100%, 340px);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 18px 45px rgba(40, 55, 39, 0.18);
+}
+
+.login-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.modal-close-button {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.modal-close-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.login-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.login-field input {
+  width: 100%;
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+  outline: 0;
+  font-size: 16px;
+}
+
+.login-field input:focus {
+  border-color: var(--leaf);
+}
+
+.login-error {
+  min-height: 20px;
+  margin: 8px 0 10px;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.login-submit-button {
+  width: 100%;
+  background: var(--leaf);
+  color: #ffffff;
+}
+.villager-portrait,
+.owned-portrait {
+  display: grid;
+  justify-items: center;
+  align-self: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.owner-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 18px;
+}
+
+.owner-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.owner-mark-kongboki {
+  background: #ffe1ed;
+  color: #b83268;
+  box-shadow: inset 0 0 0 1px #f4a7c3;
+}
+
+.owner-mark-kongsolki {
+  background: #dbeafe;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px #93c5fd;
+}
+
+.remove-button:disabled {
+  background: #eef1ed;
+  color: var(--muted);
+  cursor: default;
+}
+.owned-item {
+  grid-template-columns: 66px minmax(0, 1fr) auto;
 }
