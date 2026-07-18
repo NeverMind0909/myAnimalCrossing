@@ -277,9 +277,20 @@ function mergeVillagers(baseVillagers, extraVillagers) {
   return [...byEnglishName.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
+function normalizeIdList(value) {
+  return Array.isArray(value) ? [...new Set(value.map(String))] : [];
+}
+
+function areSameIds(left, right) {
+  if (left.length !== right.length) return false;
+  const rightIds = new Set(right);
+  return left.every((id) => rightIds.has(id));
+}
+
 function loadOwned() {
   const owned = readJson(OWNED_KEY, null);
-  const legacyOwned = readJson(LEGACY_OWNED_KEY, []);
+  const legacyOwned = normalizeIdList(readJson(LEGACY_OWNED_KEY, []));
+  let shouldSave = false;
 
   state.ownedByIsland = {
     kongboki: new Set(),
@@ -287,15 +298,30 @@ function loadOwned() {
   };
 
   if (owned && typeof owned === "object" && !Array.isArray(owned)) {
-    Object.keys(ISLAND_LABELS).forEach((island) => {
-      state.ownedByIsland[island] = new Set((owned[island] || []).map(String));
-    });
+    const kongbokiIds = normalizeIdList(owned.kongboki);
+    const kongsolkiIds = normalizeIdList(owned.kongsolki);
+
+    state.ownedByIsland.kongboki = new Set(kongbokiIds);
+    state.ownedByIsland.kongsolki = new Set(kongsolkiIds);
+
+    if (kongbokiIds.length && areSameIds(kongbokiIds, kongsolkiIds)) {
+      state.ownedByIsland.kongsolki = new Set();
+      shouldSave = true;
+    }
+
+    if (shouldSave) saveOwned();
     return;
   }
 
-  if (Array.isArray(legacyOwned)) {
-    state.ownedByIsland.kongboki = new Set(legacyOwned.map(String));
+  if (Array.isArray(owned)) {
+    state.ownedByIsland.kongboki = new Set(normalizeIdList(owned));
+    shouldSave = true;
+  } else if (legacyOwned.length) {
+    state.ownedByIsland.kongboki = new Set(legacyOwned);
+    shouldSave = true;
   }
+
+  if (shouldSave) saveOwned();
 }
 
 function saveOwned() {
@@ -306,11 +332,11 @@ function saveOwned() {
 }
 
 function getLoginIsland() {
-  return ACCOUNT_ISLANDS[state.loginId] || "";
+  return ACCOUNT_ISLANDS[String(state.loginId).trim()] || "";
 }
 
 function canEditIsland(island = state.currentIsland) {
-  return getLoginIsland() === island;
+  return Boolean(island) && getLoginIsland() === island;
 }
 
 function getIslandOwnedIds(island = state.currentIsland) {
@@ -321,14 +347,14 @@ function getVillagerIslands(villagerId) {
   return Object.keys(ISLAND_LABELS).filter((island) => getIslandOwnedIds(island).has(villagerId));
 }
 function loadLogin() {
-  const savedId = readJson(AUTH_KEY, "");
+  const savedId = String(readJson(AUTH_KEY, "")).trim();
   state.loginId = ALLOWED_LOGIN_IDS.includes(savedId) ? savedId : "";
   updateLoginButton();
 }
 
 function saveLogin(id) {
-  state.loginId = id;
-  writeJson(AUTH_KEY, id);
+  state.loginId = String(id).trim();
+  writeJson(AUTH_KEY, state.loginId);
   updateLoginButton();
 }
 
@@ -414,7 +440,11 @@ function createVillagerCard(villager) {
   fragment.querySelector('[data-field="catchphrase"]').textContent = villager.catchphrase;
   fragment.querySelector('[data-field="birthday"]').textContent = villager.birthday;
 
-  button.textContent = !loginIsland ? "로그인 필요" : isOwnedByLogin ? "찜 완료" : "추가";
+  button.textContent = !loginIsland
+    ? "로그인 필요"
+    : isOwnedByLogin
+      ? "찜 완료"
+      : `${ISLAND_LABELS[loginIsland].replace(" 주민", "")}에 추가`;
   button.disabled = !loginIsland || isOwnedByLogin;
   button.addEventListener("click", () => {
     if (!loginIsland) {
@@ -573,6 +603,8 @@ function setView(view, island = state.currentIsland) {
   if (location.hash !== hash) {
     history.replaceState(null, "", hash);
   }
+
+  renderOwned();
 }
 
 function readViewFromHash() {
