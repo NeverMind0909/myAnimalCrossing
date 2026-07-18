@@ -1,7 +1,9 @@
 const OWNED_KEY = "acnh-owned-villagers-v2";
+const API_URL = "https://raw.githubusercontent.com/NeverMind0909/myAnimalCrossing/main/villagers.json";
 
 const state = {
-  villagers: Array.isArray(window.ACNH_VILLAGERS) ? window.ACNH_VILLAGERS : [],
+  villagers: [],
+  dataSource: "로딩 중...",
   ownedIds: new Set(),
   query: "",
   currentView: "search",
@@ -192,7 +194,7 @@ function renderOwned() {
 }
 
 function render() {
-  els.dataStatus.textContent = `${state.villagers.length}명 로컬`;
+  els.dataStatus.textContent = state.dataSource;
   renderSearchResults();
   renderOwned();
 }
@@ -249,6 +251,30 @@ window.addEventListener("hashchange", () => {
   setView(readViewFromHash());
 });
 
-loadOwned();
-setView(readViewFromHash());
-render();
+async function init() {
+  loadOwned();
+  setView(readViewFromHash());
+  render();
+
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error("API response not ok");
+    state.villagers = await response.json();
+    state.dataSource = `${state.villagers.length}명 API`;
+  } catch (error) {
+    console.error("External API load failed, trying local fallback:", error);
+    try {
+      const response = await fetch("./villagers.json");
+      if (!response.ok) throw new Error("Local fallback response not ok");
+      state.villagers = await response.json();
+      state.dataSource = `${state.villagers.length}명 (로컬 JSON)`;
+    } catch (fallbackError) {
+      console.error("Fallback load failed:", fallbackError);
+      state.dataSource = "데이터 로드 실패";
+    }
+  } finally {
+    render();
+  }
+}
+
+init();
