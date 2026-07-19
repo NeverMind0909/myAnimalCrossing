@@ -368,12 +368,34 @@ function loadWishlist() {
   state.wishlistByIsland = toIslandSets(readJson(WISHLIST_KEY, null));
 }
 
-function getRemoteUrl() {
-  return String(SYNC_CONFIG.url || "").trim();
+function getSupabaseConfig() {
+  const projectUrl = String(SYNC_CONFIG.projectUrl || "").trim().replace(/\/+$/, "");
+  const anonKey = String(SYNC_CONFIG.anonKey || "").trim();
+  const table = String(SYNC_CONFIG.table || "acnh_shared_state").trim();
+  const rowId = String(SYNC_CONFIG.rowId || "main").trim();
+  return { projectUrl, anonKey, table, rowId };
 }
 
-function getRemoteHeaders() {
-  return Object.assign({ "Content-Type": "application/json" }, SYNC_CONFIG.headers || {});
+function hasRemoteSyncConfig() {
+  const { projectUrl, anonKey, table, rowId } = getSupabaseConfig();
+  return Boolean(projectUrl && anonKey && table && rowId);
+}
+
+function getSupabaseTableUrl() {
+  const { projectUrl, table } = getSupabaseConfig();
+  return `${projectUrl}/rest/v1/${encodeURIComponent(table)}`;
+}
+
+function getRemoteHeaders(extraHeaders = {}) {
+  const { anonKey } = getSupabaseConfig();
+  return Object.assign(
+    {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      "Content-Type": "application/json",
+    },
+    extraHeaders,
+  );
 }
 
 function getSharedState() {
@@ -393,33 +415,41 @@ function applySharedState(data) {
 }
 
 async function loadRemoteSharedState() {
-  const url = getRemoteUrl();
-  if (!url) return;
+  if (!hasRemoteSyncConfig()) return;
+  const { rowId } = getSupabaseConfig();
+  const url = `${getSupabaseTableUrl()}?id=eq.${encodeURIComponent(rowId)}&select=data`;
 
   try {
     const response = await fetch(url, {
       cache: "no-store",
       headers: getRemoteHeaders(),
     });
-    if (!response.ok) throw new Error(`Sync load failed: ${response.status}`);
-    applySharedState(await response.json());
+    if (!response.ok) throw new Error(`Supabase load failed: ${response.status}`);
+
+    const rows = await response.json();
+    applySharedState(rows?.[0]?.data);
   } catch (error) {
-    console.warn("Remote sync load failed:", error);
+    console.warn("Supabase sync load failed:", error);
   }
 }
 
 async function syncSharedState() {
-  const url = getRemoteUrl();
-  if (!url) return;
+  if (!hasRemoteSyncConfig()) return;
+  const { rowId } = getSupabaseConfig();
 
   try {
-    await fetch(url, {
-      method: SYNC_CONFIG.method || "PUT",
-      headers: getRemoteHeaders(),
-      body: JSON.stringify(getSharedState()),
+    const response = await fetch(getSupabaseTableUrl(), {
+      method: "POST",
+      headers: getRemoteHeaders({ Prefer: "resolution=merge-duplicates" }),
+      body: JSON.stringify({
+        id: rowId,
+        data: getSharedState(),
+        updated_at: new Date().toISOString(),
+      }),
     });
+    if (!response.ok) throw new Error(`Supabase save failed: ${response.status}`);
   } catch (error) {
-    console.warn("Remote sync save failed:", error);
+    console.warn("Supabase sync save failed:", error);
   }
 }
 

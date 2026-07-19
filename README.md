@@ -19,22 +19,47 @@
 
 ## 여러 기기 동기화
 
-정적 HTML과 `localStorage`만으로는 A폰/B폰 데이터가 자동으로 같아질 수 없습니다. 두 사람이 같은 섬 데이터를 보려면 Firebase, Supabase, Cloudflare Worker 같은 외부 저장소가 필요합니다.
+정적 HTML과 `localStorage`만으로는 A폰/B폰 데이터가 자동으로 같아질 수 없습니다. Supabase 프로젝트를 만들고 `sync-config.js`에 URL과 anon key를 넣으면 같은 데이터를 공유합니다.
 
-이 앱은 `sync-config.js`의 `url`에 공유 저장소 엔드포인트를 넣으면 다음 JSON을 `GET`/`PUT`하는 방식으로 동기화하도록 준비되어 있습니다.
+Supabase SQL Editor에서 아래 테이블을 먼저 만드세요.
 
-```json
-{
-  "owned": {
-    "kongboki": [],
-    "kongsolki": []
-  },
-  "wishlist": {
-    "kongboki": [],
-    "kongsolki": []
-  }
-}
+```sql
+create table if not exists public.acnh_shared_state (
+  id text not null,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamp with time zone not null default now(),
+  constraint app_state_pkey primary key (id)
+);
+
+alter table public.acnh_shared_state enable row level security;
+
+create policy "Anyone can read acnh shared state"
+  on public.acnh_shared_state for select
+  using (true);
+
+create policy "Anyone can upsert acnh shared state"
+  on public.acnh_shared_state for insert
+  with check (true);
+
+create policy "Anyone can update acnh shared state"
+  on public.acnh_shared_state for update
+  using (true)
+  with check (true);
 ```
+
+그 다음 `sync-config.js`에 Supabase 설정을 넣으면 됩니다.
+
+```js
+window.ACNH_SYNC_CONFIG = {
+  provider: "supabase",
+  projectUrl: "https://YOUR_PROJECT_ID.supabase.co",
+  anonKey: "YOUR_SUPABASE_ANON_KEY",
+  table: "acnh_shared_state",
+  rowId: "main",
+};
+```
+
+앱은 `acnh_shared_state` 테이블의 `id = main` 한 행의 `data` 컬럼에 섬 주민과 위시리스트를 저장합니다.
 ## 친구에게 공유하기
 
 카카오톡으로 쉽게 공유하려면 GitHub Pages, Netlify, Vercel 같은 정적 호스팅에 올린 뒤 URL 하나를 보내는 것을 추천합니다.
