@@ -147,6 +147,9 @@
         >
           무값 예측기
         </a>
+        <button class="sidebar-link app-info-link" type="button" data-view="app-info">
+          앱 정보
+        </button>
       </div>
     </aside>
 
@@ -194,6 +197,32 @@
             enterkeyhint="search"
           />
         </label>
+        <div id="filterControls" class="filter-controls" aria-label="주민 필터">
+          <label>
+            <span>성격</span>
+            <select id="personalityFilter">
+              <option value="">전체</option>
+            </select>
+          </label>
+          <label>
+            <span>종족</span>
+            <select id="speciesFilter">
+              <option value="">전체</option>
+            </select>
+          </label>
+          <label>
+            <span>성별</span>
+            <select id="genderFilter">
+              <option value="">전체</option>
+            </select>
+          </label>
+          <label>
+            <span>amiibo 탄</span>
+            <select id="amiiboSeriesFilter">
+              <option value="">전체</option>
+            </select>
+          </label>
+        </div>
         <div id="searchResults" class="villager-grid" aria-live="polite"></div>
       </section>
 
@@ -211,6 +240,16 @@
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
       </section>
 
+
+      <section
+        id="villagerDetailView"
+        class="view-panel villager-detail-panel"
+        data-view="villager-detail"
+        aria-labelledby="villager-detail-title"
+        hidden
+      >
+        <div id="villagerDetailRoot"></div>
+      </section>
       <section
         id="tipsMysteryView"
         class="view-panel tips-panel"
@@ -222,6 +261,42 @@
           <h2 id="tips-mystery-title">마일섬 / 갑돌섬</h2>
         </div>
         <div id="tourTipsRoot"></div>
+      </section>
+
+      <section
+        id="appInfoView"
+        class="view-panel app-info-panel"
+        data-view="app-info"
+        aria-labelledby="app-info-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="app-info-title">앱 정보</h2>
+        </div>
+        <div class="app-info-content">
+          <section>
+            <h3>무엇을 하는 앱인가요?</h3>
+            <p>
+              모여봐요 동물의 숲 주민을 검색하고, 콩보키섬과 콩솔키섬의 보유 주민과 위시리스트를 함께 관리하는 작은 개인용 도구입니다.
+            </p>
+          </section>
+          <section>
+            <h3>저장 방식</h3>
+            <p>
+              주민 목록과 찜 정보는 Supabase 동기화 설정이 있으면 두 기기 사이에서 공유되고, 주민 상세 보조 데이터는 브라우저 캐시에 저장됩니다.
+            </p>
+          </section>
+          <section>
+            <h3>출처</h3>
+            <ul class="app-source-list">
+              <li><a href="https://github.com/alexislours/ACNHAPI" target="_blank" rel="noopener noreferrer">ACNHAPI</a> - 기본 주민 목록과 주민 이미지</li>
+              <li><a href="https://nookipedia.com/" target="_blank" rel="noopener noreferrer">Nookipedia</a> - 주민 상세 정보, 집 이미지, amiibo 카드 정보</li>
+              <li><a href="https://animalcrossing.soopoolleaf.com/ko/" target="_blank" rel="noopener noreferrer">Soopoolleaf Animal Crossing Encyclopedia</a> - 한국어 좌우명과 좋아하는 노래 보조 데이터</li>
+              <li><a href="https://acnhislandtours.fandom.com/wiki/All_Mystery_Islands" target="_blank" rel="noopener noreferrer">ACNH Island Tours Wiki</a> - 마일섬 정보</li>
+              <li><a href="https://turnipprophet.io/" target="_blank" rel="noopener noreferrer">Turnip Prophet</a> - 무값 예측기 링크</li>
+            </ul>
+          </section>
+        </div>
       </section>
       <section
         id="tipsCritterView"
@@ -273,6 +348,22 @@
         <div id="tourModalBody" class="tour-modal-body"></div>
       </article>
     </div>
+
+    <div id="houseImageModal" class="modal-backdrop" hidden>
+      <article class="house-modal" role="dialog" aria-modal="true" aria-labelledby="houseModalTitle">
+        <div class="login-modal-header">
+          <h2 id="houseModalTitle"></h2>
+          <button id="houseModalCloseButton" class="modal-close-button" type="button" aria-label="집 이미지 닫기">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <img id="houseModalImage" class="house-modal-image" alt="" />
+      </article>
+    </div>
+
+
     <template id="villagerCardTemplate">
       <article class="villager-card">
         <img class="villager-image" alt="" loading="lazy" width="78" height="78" />
@@ -306,6 +397,7 @@
     <script src="./sync-config.js"></script>
     <script src="./tips-data.js"></script>
     <script src="./tips.js"></script>
-    <script src="./app.js?v=20260722-4" defer></script>
+    <script src="./soopoolleaf-data.js"></script>
+    <script src="./app.js?v=20260725-4" defer></script>
   </body>
 </html>
