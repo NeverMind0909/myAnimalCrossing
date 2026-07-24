@@ -122,17 +122,21 @@ const els = {
   template: document.querySelector("#villagerCardTemplate"),
   searchView: document.querySelector("#searchView"),
   ownedView: document.querySelector("#ownedView"),
+  tipsMysteryView: document.querySelector("#tipsMysteryView"),
+  tipsCritterView: document.querySelector("#tipsCritterView"),
   sidebar: document.querySelector("#sidebar"),
   sidebarBackdrop: document.querySelector("#sidebarBackdrop"),
   menuOpenButton: document.querySelector("#menuOpenButton"),
   menuCloseButton: document.querySelector("#menuCloseButton"),
+  tipsToggleButton: document.querySelector("#tipsToggleButton"),
+  tipsSubmenu: document.querySelector("#tipsSubmenu"),
   loginButton: document.querySelector("#loginButton"),
   loginModal: document.querySelector("#loginModal"),
   loginForm: document.querySelector("#loginForm"),
   loginInput: document.querySelector("#loginInput"),
   loginError: document.querySelector("#loginError"),
   loginCancelButton: document.querySelector("#loginCancelButton"),
-  sidebarLinks: document.querySelectorAll(".sidebar-link"),
+  sidebarLinks: document.querySelectorAll(".sidebar-link[data-view]"),
 };
 
 const fallbackImage =
@@ -751,9 +755,19 @@ function setMenuOpen(open) {
   els.sidebarBackdrop.classList.toggle("is-visible", open);
 }
 
+function setTipsMenuOpen(open) {
+  if (!els.tipsToggleButton || !els.tipsSubmenu) return;
+  els.tipsToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
+  els.tipsSubmenu.hidden = !open;
+}
+
+function isTipsView(view) {
+  return view === "tips-mystery" || view === "tips-critter";
+}
+
 function setView(view, island = state.currentIsland) {
   if (view === "owned") view = "island";
-  if (view !== "search" && view !== "island") view = "search";
+  if (view !== "search" && view !== "island" && !isTipsView(view)) view = "search";
 
   if (view === "island" && ISLAND_LABELS[island]) {
     state.currentIsland = island;
@@ -762,16 +776,21 @@ function setView(view, island = state.currentIsland) {
   state.currentView = view;
   els.searchView.hidden = view !== "search";
   els.ownedView.hidden = view !== "island";
+  els.tipsMysteryView.hidden = view !== "tips-mystery";
+  els.tipsCritterView.hidden = view !== "tips-critter";
   els.ownedTitle.textContent = ISLAND_LABELS[state.currentIsland];
+  setTipsMenuOpen(isTipsView(view));
 
   els.sidebarLinks.forEach((link) => {
     const isActive = view === "search"
       ? link.dataset.view === "search"
-      : link.dataset.view === "island" && link.dataset.island === state.currentIsland;
+      : view === "island"
+        ? link.dataset.view === "island" && link.dataset.island === state.currentIsland
+        : link.dataset.view === view;
     link.classList.toggle("is-active", isActive);
   });
 
-  const hash = view === "island" ? `#${state.currentIsland}` : "#search";
+  const hash = view === "island" ? `#${state.currentIsland}` : `#${view}`;
   if (location.hash !== hash) {
     history.replaceState(null, "", hash);
   }
@@ -785,6 +804,12 @@ function readViewFromHash() {
   }
   if (location.hash === "#kongboki" || location.hash === "#owned") {
     return { view: "island", island: "kongboki" };
+  }
+  if (location.hash === "#tips-mystery") {
+    return { view: "tips-mystery", island: state.currentIsland };
+  }
+  if (location.hash === "#tips-critter") {
+    return { view: "tips-critter", island: state.currentIsland };
   }
   return { view: "search", island: state.currentIsland };
 }
@@ -834,7 +859,9 @@ els.searchInput.addEventListener("input", (event) => {
 els.menuOpenButton.addEventListener("click", () => setMenuOpen(true));
 els.menuCloseButton.addEventListener("click", () => setMenuOpen(false));
 els.sidebarBackdrop.addEventListener("click", () => setMenuOpen(false));
-
+els.tipsToggleButton?.addEventListener("click", () => {
+  setTipsMenuOpen(els.tipsSubmenu.hidden);
+});
 els.sidebarLinks.forEach((link) => {
   link.addEventListener("click", () => {
     setView(link.dataset.view, link.dataset.island);

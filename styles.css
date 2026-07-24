@@ -661,3 +661,451 @@ dd {
   color: #80630b;
   box-shadow: inset 0 0 0 1px #e8cf72;
 }
+.sidebar-submenu {
+  display: grid;
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.sidebar-sublink {
+  min-height: 38px;
+  padding-left: 12px;
+  font-size: 0.92rem;
+}
+
+.tips-toggle::after {
+  content: "▼";
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.tips-toggle[aria-expanded="true"]::after {
+  content: "▲";
+}
+
+.tips-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.tip-block {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.tip-block h3 {
+  margin: 0 0 8px;
+  color: var(--leaf-dark);
+  font-size: 1rem;
+}
+
+.tip-block p {
+  margin: 0 0 10px;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.tip-block ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.tip-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tip-checklist span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #edf7f0;
+  color: var(--leaf-dark);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+@media (min-width: 768px) {
+  .tips-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tip-wide {
+    grid-column: 1 / -1;
+  }
+}
+.tips-toggle {
+  justify-content: center;
+  text-align: center;
+}
+
+.tip-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tip-tab {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.tip-tab.is-active {
+  border-color: var(--leaf);
+  background: var(--leaf);
+  color: #ffffff;
+}
+
+.tip-tab-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.tip-intro {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.tip-intro h3 {
+  margin: 0 0 6px;
+  color: var(--leaf-dark);
+  font-size: 1rem;
+}
+
+.tip-intro p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.island-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.island-type-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.island-type-card img {
+  width: 112px;
+  height: 96px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #edf7f0;
+}
+
+.island-type-card h3 {
+  margin: 0 0 5px;
+  color: var(--leaf-dark);
+  font-size: 0.98rem;
+}
+
+.island-type-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.island-facts {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+}
+
+.island-facts div {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.island-facts dt,
+.island-facts dd {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.island-facts dt {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.island-facts dd {
+  color: var(--ink);
+}
+
+.source-link {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #edf7f0;
+  color: var(--leaf-dark);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (max-width: 430px) {
+  .island-type-card {
+    grid-template-columns: 1fr;
+  }
+
+  .island-type-card img {
+    width: 100%;
+    height: 150px;
+  }
+}
+
+@media (min-width: 768px) {
+  .island-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tips-toggle {
+  position: relative;
+  justify-content: center;
+  text-align: center;
+}
+
+.tips-toggle::after {
+  position: absolute;
+  right: 14px;
+  margin-left: 0;
+}
+.sidebar-submenu[hidden],
+.tip-tab-panel[hidden] {
+  display: none;
+}
+.tour-list-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tour-list-heading h3 {
+  margin: 0;
+  color: var(--leaf-dark);
+  font-size: 1rem;
+}
+
+.info-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--leaf-dark);
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 0.88rem;
+  font-weight: 900;
+  font-style: italic;
+}
+
+.island-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.island-type-card {
+  grid-template-columns: 1fr;
+  align-content: start;
+  text-align: left;
+  cursor: pointer;
+}
+
+.island-type-card img {
+  width: 100%;
+  height: 120px;
+}
+
+.tour-modal {
+  width: min(100%, 380px);
+  max-height: min(82vh, 640px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 18px 45px rgba(40, 55, 39, 0.18);
+}
+
+.tour-modal-body {
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.tour-modal-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 430px) {
+  .island-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .island-type-card {
+    padding: 8px;
+  }
+
+  .island-type-card img {
+    height: 92px;
+  }
+
+  .island-type-card p,
+  .island-facts dt,
+  .island-facts dd {
+    font-size: 0.74rem;
+  }
+}
+
+.island-type-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  min-height: 0;
+}
+
+.island-type-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #eef7f1;
+}
+
+.island-type-card h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  color: var(--leaf-dark);
+  word-break: keep-all;
+}
+
+.tour-detail-view {
+  display: grid;
+  gap: 12px;
+}
+
+.tour-back-button {
+  justify-self: start;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--leaf-dark);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tour-detail-view h3 {
+  margin: 0;
+  color: var(--leaf-dark);
+  font-size: 1.15rem;
+}
+
+.tour-detail-subtitle {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.tour-detail-image {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef7f1;
+}
+
+.tour-detail-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.tour-detail-list div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tour-detail-list dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.tour-detail-list dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.tour-empty-text {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 430px) {
+  .island-type-card {
+    padding: 7px;
+  }
+
+  .island-type-card h3 {
+    font-size: 0.78rem;
+  }
+
+  .tour-detail-list div {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+}

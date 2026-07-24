@@ -118,6 +118,23 @@
         <button class="sidebar-link" type="button" data-view="island" data-island="kongsolki">
           콩솔키섬 주민
         </button>
+        <button
+          id="tipsToggleButton"
+          class="sidebar-link tips-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="tipsSubmenu"
+        >
+          모동숲 팁
+        </button>
+        <div id="tipsSubmenu" class="sidebar-submenu" hidden>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="tips-mystery">
+            마일섬 / 갑돌섬
+          </button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="tips-critter">
+            생물 도감
+          </button>
+        </div>
       </nav>
 
       <div class="sidebar-actions">
@@ -193,6 +210,34 @@
         </div>
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
       </section>
+
+      <section
+        id="tipsMysteryView"
+        class="view-panel tips-panel"
+        data-view="tips-mystery"
+        aria-labelledby="tips-mystery-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="tips-mystery-title">마일섬 / 갑돌섬</h2>
+        </div>
+        <div id="tourTipsRoot"></div>
+      </section>
+      <section
+        id="tipsCritterView"
+        class="view-panel tips-panel"
+        data-view="tips-critter"
+        aria-labelledby="tips-critter-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="tips-critter-title">생물 도감</h2>
+        </div>
+        <div class="tip-block">
+          <h3>준비 중</h3>
+          <p>물고기, 곤충, 해산물 도감 화면을 여기에 추가할 예정입니다.</p>
+        </div>
+      </section>
     </main>
 
     <div id="loginModal" class="modal-backdrop" hidden>
@@ -214,6 +259,20 @@
       </form>
     </div>
 
+
+    <div id="tourInfoModal" class="modal-backdrop" hidden>
+      <article class="tour-modal" role="dialog" aria-modal="true" aria-labelledby="tourModalTitle">
+        <div class="login-modal-header">
+          <h2 id="tourModalTitle"></h2>
+          <button id="tourModalCloseButton" class="modal-close-button" type="button" aria-label="팁 닫기">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <div id="tourModalBody" class="tour-modal-body"></div>
+      </article>
+    </div>
     <template id="villagerCardTemplate">
       <article class="villager-card">
         <img class="villager-image" alt="" loading="lazy" width="78" height="78" />
@@ -245,6 +304,8 @@
     </template>
 
     <script src="./sync-config.js"></script>
-    <script src="./app.js?v=20260719-2" defer></script>
+    <script src="./tips-data.js"></script>
+    <script src="./tips.js"></script>
+    <script src="./app.js?v=20260722-4" defer></script>
   </body>
 </html>
