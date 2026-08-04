@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --phone-width: 393px;
   --sidebar-width: 280px;
@@ -1707,4 +1707,239 @@ dd {
   color: var(--leaf-dark);
   font-size: 0.86rem;
   font-weight: 900;
+}
+
+.owned-summary {
+  display: grid;
+  gap: 8px;
+  margin: -2px 0 12px;
+}
+
+.summary-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.summary-chip-gender {
+  background: #edf7f0;
+  color: var(--leaf-dark);
+}
+
+.summary-chip-personality {
+  background: #fff8df;
+  color: #6f5314;
+}
+
+.turnip-controls,
+.turnip-price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.turnip-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.turnip-field span,
+.turnip-check-field span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.turnip-field input,
+.turnip-field select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.turnip-field input:focus,
+.turnip-field select:focus,
+.turnip-check-field:focus-within {
+  outline: 3px solid rgba(47, 125, 87, 0.2);
+  border-color: var(--leaf);
+}
+
+.turnip-check-field {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.turnip-check-field input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--leaf);
+}
+
+.turnip-summary-card {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(47, 125, 87, 0.35);
+  border-radius: 8px;
+  background: #edf7f0;
+}
+
+.turnip-summary-card span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.turnip-summary-card strong {
+  color: var(--leaf-dark);
+  font-size: 1.08rem;
+}
+
+.turnip-summary-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.turnip-result {
+  display: grid;
+  gap: 12px;
+}
+
+.turnip-pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.turnip-pattern-grid span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff8df;
+  color: #6f5314;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.turnip-result-table {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.turnip-result-table div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.turnip-result-table div:last-child {
+  border-bottom: 0;
+}
+
+.turnip-result-table div.is-best {
+  background: #fff8df;
+}
+
+.turnip-result-table span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.turnip-result-table strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.turnip-source-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.turnip-source-note a {
+  color: var(--leaf-dark);
+  font-weight: 900;
+}
+
+.turnip-field.is-current-slot {
+  padding: 8px;
+  border: 1px solid rgba(47, 125, 87, 0.42);
+  border-radius: 10px;
+  background: #edf7f0;
+}
+
+.turnip-field.is-current-slot span::after {
+  content: " 지금";
+  color: var(--leaf-dark);
+}
+
+.turnip-field.is-current-slot input {
+  border-color: var(--leaf);
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(47, 125, 87, 0.18);
+}
+
+.turnip-header-reset-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--leaf-dark);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.turnip-header-reset-button:focus-visible {
+  outline: 3px solid rgba(47, 125, 87, 0.2);
+  border-color: var(--leaf);
 }

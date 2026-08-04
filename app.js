@@ -213,12 +213,14 @@ const els = {
   genderFilter: document.querySelector("#genderFilter"),
   amiiboSeriesFilter: document.querySelector("#amiiboSeriesFilter"),
   ownedVillagers: document.querySelector("#ownedVillagers"),
+  ownedSummary: document.querySelector("#ownedSummary"),
   ownedTitle: document.querySelector("#owned-title"),
   template: document.querySelector("#villagerCardTemplate"),
   searchView: document.querySelector("#searchView"),
   ownedView: document.querySelector("#ownedView"),
   tipsMysteryView: document.querySelector("#tipsMysteryView"),
   tipsCritterView: document.querySelector("#tipsCritterView"),
+  turnipView: document.querySelector("#turnipView"),
   appInfoView: document.querySelector("#appInfoView"),
   villagerDetailView: document.querySelector("#villagerDetailView"),
   villagerDetailRoot: document.querySelector("#villagerDetailRoot"),
@@ -349,7 +351,7 @@ function normalizeBaseVillagers(apiData) {
 }
 
 function getWikiField(content, fieldName) {
-  const escapedField = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedField = fieldName.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
   const pattern = new RegExp(`^\\|[^\\S\\r\\n]*${escapedField}[^\\S\\r\\n]*=[^\\S\\r\\n]*(.*)$`, "im");
   return content.match(pattern)?.[1]?.trim() || "";
 }
@@ -1206,6 +1208,48 @@ function createVillagerCard(villager) {
   return fragment;
 }
 
+function countByValue(items, selector) {
+  return items.reduce((counts, item) => {
+    const value = selector(item) || "정보 없음";
+    counts[value] = (counts[value] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function createSummaryChip(label, count, className = "") {
+  const chip = document.createElement("span");
+  chip.className = `summary-chip${className ? ` ${className}` : ""}`;
+  chip.textContent = `${label} ${count}`;
+  return chip;
+}
+
+function renderOwnedSummary(ownedVillagers) {
+  if (!els.ownedSummary) return;
+  els.ownedSummary.replaceChildren();
+
+  const genderCounts = countByValue(ownedVillagers, (villager) => villager.gender);
+  const personalityCounts = countByValue(ownedVillagers, (villager) => villager.personality);
+  const fragment = document.createDocumentFragment();
+
+  const genderGroup = document.createElement("div");
+  genderGroup.className = "summary-chip-group";
+  genderGroup.append(
+    createSummaryChip("남", genderCounts["남성"] || genderCounts["Male"] || 0, "summary-chip-gender"),
+    createSummaryChip("여", genderCounts["여성"] || genderCounts["Female"] || 0, "summary-chip-gender"),
+  );
+  fragment.append(genderGroup);
+
+  const personalityGroup = document.createElement("div");
+  personalityGroup.className = "summary-chip-group";
+  const personalityOrder = ["먹보", "친절함", "느끼함", "아이돌", "운동광", "성숙함", "무뚝뚝", "단순활발"];
+  personalityOrder.forEach((personality) => {
+    personalityGroup.append(createSummaryChip(personality, personalityCounts[personality] || 0, "summary-chip-personality"));
+  });
+
+  fragment.append(personalityGroup);
+  els.ownedSummary.append(fragment);
+}
+
 function renderSearchResults() {
   const results = getSearchResults();
   els.searchResults.replaceChildren();
@@ -1239,6 +1283,7 @@ function renderOwned() {
     .filter(Boolean);
 
   els.ownedCount.textContent = `${ownedVillagers.length}명`;
+  renderOwnedSummary(ownedVillagers);
   els.ownedVillagers.replaceChildren();
 
   if (!ownedVillagers.length) {
@@ -1352,7 +1397,7 @@ function isTipsView(view) {
 
 function setView(view, island = state.currentIsland) {
   if (view === "owned") view = "island";
-  if (view !== "search" && view !== "island" && view !== "villager-detail" && view !== "app-info" && !isTipsView(view)) view = "search";
+  if (view !== "search" && view !== "island" && view !== "villager-detail" && view !== "turnip" && view !== "app-info" && !isTipsView(view)) view = "search";
 
   if (view === "island" && ISLAND_LABELS[island]) {
     state.currentIsland = island;
@@ -1363,6 +1408,7 @@ function setView(view, island = state.currentIsland) {
   els.ownedView.hidden = view !== "island";
   els.tipsMysteryView.hidden = view !== "tips-mystery";
   els.tipsCritterView.hidden = view !== "tips-critter";
+  els.turnipView.hidden = view !== "turnip";
   els.appInfoView.hidden = view !== "app-info";
   els.villagerDetailView.hidden = view !== "villager-detail";
   els.ownedTitle.textContent = ISLAND_LABELS[state.currentIsland];
@@ -1400,6 +1446,9 @@ function readViewFromHash() {
   }
   if (location.hash === "#tips-critter") {
     return { view: "tips-critter", island: state.currentIsland };
+  }
+  if (location.hash === "#turnip") {
+    return { view: "turnip", island: state.currentIsland };
   }
   if (location.hash === "#app-info") {
     return { view: "app-info", island: state.currentIsland };

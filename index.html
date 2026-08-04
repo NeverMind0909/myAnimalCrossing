@@ -118,6 +118,9 @@
         <button class="sidebar-link" type="button" data-view="island" data-island="kongsolki">
           콩솔키섬 주민
         </button>
+        <button class="sidebar-link" type="button" data-view="turnip">
+          무값 예측기
+        </button>
         <button
           id="tipsToggleButton"
           class="sidebar-link tips-toggle"
@@ -145,7 +148,7 @@
           target="_blank"
           rel="noopener noreferrer"
         >
-          무값 예측기
+          무값 예측기 (링크)
         </a>
         <button class="sidebar-link app-info-link" type="button" data-view="app-info">
           앱 정보
@@ -237,6 +240,7 @@
           <h2 id="owned-title">콩보키섬 주민</h2>
           <span id="ownedCount" class="status-pill">0명</span>
         </div>
+        <div id="ownedSummary" class="owned-summary" aria-live="polite"></div>
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
       </section>
 
@@ -263,6 +267,19 @@
         <div id="tourTipsRoot"></div>
       </section>
 
+
+      <section
+        id="turnipView"
+        class="view-panel turnip-panel"
+        data-view="turnip"
+        aria-labelledby="turnip-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="turnip-title">무값 예측기</h2>
+        </div>
+        <div id="turnipRoot"></div>
+      </section>
       <section
         id="appInfoView"
         class="view-panel app-info-panel"
@@ -294,6 +311,7 @@
               <li><a href="https://animalcrossing.soopoolleaf.com/ko/" target="_blank" rel="noopener noreferrer">Soopoolleaf Animal Crossing Encyclopedia</a> - 한국어 좌우명과 좋아하는 노래 보조 데이터</li>
               <li><a href="https://acnhislandtours.fandom.com/wiki/All_Mystery_Islands" target="_blank" rel="noopener noreferrer">ACNH Island Tours Wiki</a> - 마일섬 정보</li>
               <li><a href="https://turnipprophet.io/" target="_blank" rel="noopener noreferrer">Turnip Prophet</a> - 무값 예측기 링크</li>
+              <li><a href="https://github.com/mikebryant/ac-nh-turnip-prices" target="_blank" rel="noopener noreferrer">Turnip Prophet GitHub</a> - 내부 무값 예측기 엔진, Apache-2.0</li>
             </ul>
           </section>
         </div>
@@ -394,8 +412,10 @@
     <script src="./sync-config.js"></script>
     <script src="./tips-data.js"></script>
     <script src="./tips.js"></script>
-    <script src="./critters.js?v=20260805-3"></script>
+    <script src="./turnip-predictions.js"></script>
+    <script src="./turnips.js?v=20260805-5"></script>
+    <script src="./critters.js?v=20260805-4"></script>
     <script src="./soopoolleaf-data.js"></script>
-    <script src="./app.js?v=20260805-3" defer></script>
+    <script src="./app.js?v=20260805-12" defer></script>
   </body>
 </html>
