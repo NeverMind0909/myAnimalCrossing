@@ -3,60 +3,65 @@
   if (!root) return;
 
   const API_BASE = "https://raw.githubusercontent.com/alexislours/ACNHAPI/master";
-  const CACHE_KEY = "acnh-critter-guide-cache-v1";
-  const CACHE_TIME_KEY = "acnh-critter-guide-cache-time-v1";
+  const CACHE_KEY = "acnh-critter-guide-cache-v2";
+  const CACHE_TIME_KEY = "acnh-critter-guide-cache-time-v2";
   const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+  const HEMISPHERE = "northern";
 
   const groups = {
-    fish: { label: "물고기", endpoint: "fish.json", specialLabel: "저스틴", specialKey: "price-cj" },
-    bugs: { label: "곤충", endpoint: "bugs.json", specialLabel: "레온", specialKey: "price-flick" },
-    sea: { label: "해산물", endpoint: "sea.json", specialLabel: "특수 판매 없음", specialKey: "" },
+    fish: { label: "물고기", endpoint: "fish.json", imagePath: "fish", specialLabel: "저스틴", specialKey: "price-cj" },
+    bugs: { label: "곤충", endpoint: "bugs.json", imagePath: "bugs", specialLabel: "레온", specialKey: "price-flick" },
+    sea: { label: "해산물", endpoint: "sea.json", imagePath: "sea", specialLabel: "특수 판매 없음", specialKey: "" },
   };
 
   const locationKo = {
-    River: "강",
-    Pond: "연못",
-    Sea: "바다",
     Pier: "부두",
-    "River (clifftop)": "강 절벽 위",
-    "River (mouth)": "강 하구",
+    Pond: "연못",
+    River: "강",
+    "River (Clifftop)": "강 절벽 위",
+    "River (Clifftop) & Pond": "강 절벽 위 / 연못",
+    "River (Mouth)": "강 하구",
+    Sea: "바다",
+    "Sea (when raining or snowing)": "바다, 비나 눈이 올 때",
     Flying: "날아다님",
+    "Flying (near water)": "물가 근처 비행",
+    "Flying by light": "불빛 주변 비행",
     "Flying near hybrid flowers": "교배꽃 주변 비행",
-    "On trees": "나무 위",
-    "On flowers": "꽃 위",
-    "On white flowers": "하얀 꽃 위",
-    "On palm trees": "야자수 위",
-    "On tree stumps": "그루터기 위",
-    "On the ground": "땅 위",
-    Underground: "땅속",
-    "On ponds and rivers": "연못/강 위",
-    "On rivers and ponds": "강/연못 위",
-    "On rocks and bush (when raining)": "비 오는 날 바위/덤불 위",
-    "On rocks": "바위 위",
-    "On rotten food": "썩은 음식 위",
-    "On villagers": "주민 주변",
-    "Disguised under trees": "나무 아래 위장",
-    "On beach rocks": "해변 바위 위",
-    Beach: "해변",
-    "From hitting rocks": "바위를 치면 등장",
+    "Hitting rocks": "바위를 치면 등장",
     "Near trash": "쓰레기 근처",
-    "Near the sea": "바닷가 근처",
-    Seaweed: "바닷속",
+    "On beach rocks": "해변 바위 위",
+    "On flowers": "꽃 위",
+    "On palm trees": "야자수 위",
+    "On ponds and rivers": "연못/강 위",
+    "On rocks and bush (when raining)": "비 오는 날 바위/덤불 위",
+    "On rotten food": "썩은 음식 위",
+    "On the beach": "해변 위",
+    "On the ground": "땅 위",
+    "On tree stumps": "그루터기 위",
+    "On trees": "나무 위",
+    "On villagers": "주민 주변",
+    "On white flowers": "하얀 꽃 위",
+    "Shaking trees": "나무를 흔들면 등장",
+    "Under trees": "나무 아래",
+    Underground: "땅속",
   };
+
   const rarityKo = { Common: "흔함", Uncommon: "보통", Rare: "희귀", "Ultra-rare": "매우 희귀" };
   const shadowKo = {
     "Smallest (1)": "매우 작음 (1)",
     "Small (2)": "작음 (2)",
     "Medium (3)": "중간 (3)",
     "Medium (4)": "중간 (4)",
-    "Medium (5)": "중간 (5)",
+    "Medium with fin (4)": "중간 + 지느러미 (4)",
     "Large (5)": "큼 (5)",
-    "Large (6)": "큼 (6)",
     "Largest (6)": "매우 큼 (6)",
     "Largest with fin (6)": "매우 큼 + 지느러미 (6)",
     Narrow: "가늘다",
+    Smallest: "매우 작음",
+    Small: "작음",
     Medium: "중간",
     Large: "큼",
+    Largest: "매우 큼",
     "X-Large": "매우 큼",
   };
   const speedKo = { Stationary: "움직이지 않음", "Very slow": "매우 느림", Slow: "느림", Medium: "보통", Fast: "빠름", "Very fast": "매우 빠름" };
@@ -65,6 +70,7 @@
     activeGroup: "fish",
     query: "",
     sort: "price-desc",
+    onlyAvailableNow: false,
     detailId: "",
     critters: { fish: [], bugs: [], sea: [] },
     loading: true,
@@ -98,12 +104,36 @@
 
   function formatMonths(availability) {
     if (availability?.isAllYear) return "연중";
-    return availability?.["month-northern"] || "-";
+    const raw = availability?.[`month-${HEMISPHERE}`] || "-";
+    return raw.replace(/(\d+)/g, "$1월").replace(/-/g, "~").replace(/ & /g, ", ");
   }
 
   function formatTime(availability) {
     if (availability?.isAllDay) return "하루 종일";
-    return availability?.time || "-";
+    return String(availability?.time || "-")
+      .replace(/(\d+)am/g, "오전 $1시")
+      .replace(/(\d+)pm/g, "오후 $1시")
+      .replace(/ - /g, " ~ ");
+  }
+
+  function getNow() {
+    const now = new Date();
+    return { month: now.getMonth() + 1, hour: now.getHours() };
+  }
+
+  function isAvailableNow(availability) {
+    const { month, hour } = getNow();
+    const months = availability?.[`month-array-${HEMISPHERE}`] || availability?.monthArray || [];
+    const hours = availability?.["time-array"] || availability?.timeArray || [];
+    const monthOk = availability?.isAllYear || months.includes(month);
+    const hourOk = availability?.isAllDay || hours.includes(hour);
+    return Boolean(monthOk && hourOk);
+  }
+
+  function refreshAvailabilityFlags() {
+    Object.values(state.critters).flat().forEach((item) => {
+      item.availableNow = isAvailableNow(item);
+    });
   }
 
   function getSpecialPrice(groupKey, raw, price) {
@@ -112,30 +142,49 @@
     return Number(raw[group.specialKey]) || Math.round(price * 1.5);
   }
 
+  function toRawAssetUrl(kind, groupKey, fileName) {
+    if (!fileName) return "";
+    return `${API_BASE}/${kind}/${groups[groupKey].imagePath}/${fileName}.png`;
+  }
+
+  function getKoreanGuidePhrase(item) {
+    if (item.groupKey === "fish") return `${item.name}은(는) ${item.location}에서 잡을 수 있는 ${item.groupLabel}입니다.`;
+    if (item.groupKey === "bugs") return `${item.name}은(는) ${item.location}에서 발견할 수 있는 ${item.groupLabel}입니다.`;
+    return `${item.name}은(는) 잠수해서 채집할 수 있는 ${item.groupLabel}입니다.`;
+  }
+
   function normalizeCritter(groupKey, key, raw) {
     const price = Number(raw.price) || 0;
     const availability = raw.availability || {};
-    return {
+    const fileName = raw["file-name"] || key;
+    const item = {
       id: `${groupKey}-${raw.id || key}`,
       key,
       groupKey,
       groupLabel: groups[groupKey].label,
       name: raw.name?.["name-KRko"] || raw.name?.["name-USen"] || key,
       englishName: raw.name?.["name-USen"] || key,
-      image: raw.image_uri || raw.icon_uri || "",
-      icon: raw.icon_uri || raw.image_uri || "",
+      image: toRawAssetUrl("images", groupKey, fileName) || raw.image_uri || "",
+      icon: toRawAssetUrl("icons", groupKey, fileName) || raw.icon_uri || "",
       price,
       specialPrice: getSpecialPrice(groupKey, raw, price),
       specialLabel: groups[groupKey].specialLabel,
-      location: translate(locationKo, availability.location),
+      location: groupKey === "sea" ? "바다, 잠수" : translate(locationKo, availability.location),
       rarity: translate(rarityKo, availability.rarity),
       months: formatMonths(availability),
       time: formatTime(availability),
       shadow: translate(shadowKo, raw.shadow),
       speed: translate(speedKo, raw.speed),
+      monthArray: availability[`month-array-${HEMISPHERE}`] || [],
+      timeArray: availability["time-array"] || [],
+      isAllYear: Boolean(availability.isAllYear),
+      isAllDay: Boolean(availability.isAllDay),
+      availableNow: isAvailableNow(availability),
       catchPhrase: raw["catch-phrase"] || "-",
       museumPhrase: raw["museum-phrase"] || "-",
     };
+    item.koreanGuidePhrase = getKoreanGuidePhrase(item);
+    return item;
   }
 
   function normalizeGroup(groupKey, data) {
@@ -153,6 +202,7 @@
     const cachedAt = Number(localStorage.getItem(CACHE_TIME_KEY)) || 0;
     if (!cached || !Object.keys(groups).every((key) => Array.isArray(cached[key]))) return false;
     state.critters = cached;
+    refreshAvailabilityFlags();
     state.loading = false;
     render();
     return Date.now() - cachedAt < CACHE_TTL_MS;
@@ -180,11 +230,14 @@
   }
 
   function getCurrentList() {
+    refreshAvailabilityFlags();
     const query = state.query.trim().toLocaleLowerCase();
     const list = state.critters[state.activeGroup] || [];
-    const filtered = query
-      ? list.filter((item) => [item.name, item.englishName].some((value) => value.toLocaleLowerCase().includes(query)))
-      : [...list];
+    const filtered = list.filter((item) => {
+      const matchesQuery = !query || [item.name, item.englishName].some((value) => value.toLocaleLowerCase().includes(query));
+      const matchesAvailability = !state.onlyAvailableNow || item.availableNow;
+      return matchesQuery && matchesAvailability;
+    });
 
     filtered.sort((a, b) => {
       if (state.sort === "name-asc") return a.name.localeCompare(b.name, "ko", { numeric: true });
@@ -256,8 +309,28 @@
     });
     sortLabel.append(sortText, sortSelect);
 
-    controls.append(searchLabel, sortLabel);
+    const availabilityLabel = document.createElement("label");
+    availabilityLabel.className = "critter-now-filter";
+    const availabilityInput = document.createElement("input");
+    availabilityInput.type = "checkbox";
+    availabilityInput.checked = state.onlyAvailableNow;
+    availabilityInput.addEventListener("change", (event) => {
+      state.onlyAvailableNow = event.target.checked;
+      renderList();
+    });
+    const availabilityText = document.createElement("span");
+    availabilityText.textContent = "지금 잡을 수 있는 것만";
+    availabilityLabel.append(availabilityInput, availabilityText);
+
+    controls.append(searchLabel, sortLabel, availabilityLabel);
     return controls;
+  }
+
+  function createAvailabilityBadge(item) {
+    const badge = document.createElement("span");
+    badge.className = `critter-availability${item.availableNow ? " is-now" : " is-later"}`;
+    badge.textContent = item.availableNow ? "지금 가능" : "지금 불가";
+    return badge;
   }
 
   function createPriceBlock(item) {
@@ -278,13 +351,16 @@
   }
 
   function createCard(item) {
-    const card = createButton("critter-card", "");
+    const card = createButton(`critter-card${item.availableNow ? " is-available" : " is-unavailable"}`, "");
     card.setAttribute("aria-label", `${item.name} 상세 보기`);
 
     const image = document.createElement("img");
     image.src = item.icon;
     image.alt = item.name;
     image.loading = "lazy";
+    image.addEventListener("error", () => {
+      if (image.src !== item.image) image.src = item.image;
+    }, { once: true });
 
     const name = document.createElement("strong");
     name.textContent = item.name;
@@ -292,7 +368,7 @@
     const meta = document.createElement("p");
     meta.textContent = `${item.location} · ${item.time}`;
 
-    card.append(image, name, createPriceBlock(item), meta);
+    card.append(createAvailabilityBadge(item), image, name, createPriceBlock(item), meta);
     card.addEventListener("click", () => {
       state.detailId = item.id;
       render();
@@ -334,7 +410,7 @@
     });
 
     const hero = document.createElement("div");
-    hero.className = "critter-detail-hero";
+    hero.className = `critter-detail-hero${item.availableNow ? " is-available" : " is-unavailable"}`;
     const image = document.createElement("img");
     image.src = item.image;
     image.alt = item.name;
@@ -343,12 +419,12 @@
     title.textContent = item.name;
     const subtitle = document.createElement("p");
     subtitle.textContent = `${item.groupLabel} · ${item.englishName}`;
-    titleWrap.append(title, subtitle, createPriceBlock(item));
+    titleWrap.append(createAvailabilityBadge(item), title, subtitle, createPriceBlock(item));
     hero.append(image, titleWrap);
 
     const detailList = document.createElement("dl");
     detailList.className = "critter-detail-list";
-    [["너굴상점", formatBells(item.price)], [item.specialPrice ? item.specialLabel : "특수 판매", item.specialPrice ? formatBells(item.specialPrice) : "해산물은 특수 매입 대상 아님"], ["출현 월", item.months], ["출현 시간", item.time], ["장소", item.location], ["희귀도", item.rarity], [state.activeGroup === "sea" ? "그림자/속도" : "그림자", state.activeGroup === "sea" ? `${item.shadow} / ${item.speed}` : item.shadow], ["도감 문구", item.museumPhrase]]
+    [["너굴상점", formatBells(item.price)], [item.specialPrice ? item.specialLabel : "특수 판매", item.specialPrice ? formatBells(item.specialPrice) : "해산물은 특수 매입 대상 아님"], ["현재 출현", item.availableNow ? "지금 잡을 수 있음" : "현재 시간에는 잡을 수 없음"], ["출현 월", item.months], ["출현 시간", item.time], ["장소", item.location], ["희귀도", item.rarity], [state.activeGroup === "sea" ? "그림자/속도" : "그림자", state.activeGroup === "sea" ? `${item.shadow} / ${item.speed}` : item.shadow], ["도감 문구", item.koreanGuidePhrase]]
       .forEach(([label, value]) => detailList.append(createDetailRow(label, value)));
 
     article.append(backButton, hero, detailList);
@@ -379,6 +455,7 @@
   }
 
   function render() {
+    refreshAvailabilityFlags();
     const selected = Object.values(state.critters).flat().find((item) => item.id === state.detailId);
     if (selected) {
       renderDetail(selected);

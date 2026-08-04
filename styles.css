@@ -1641,3 +1641,70 @@ dd {
     height: 88px;
   }
 }
+
+.critter-availability {
+  justify-self: start;
+  min-height: 24px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.critter-availability.is-now {
+  background: #dff3e5;
+  color: var(--leaf-dark);
+}
+
+.critter-availability.is-later {
+  background: #f0f0ea;
+  color: var(--muted);
+}
+
+.critter-card.is-available {
+  border-color: rgba(47, 125, 87, 0.42);
+  box-shadow: 0 8px 20px rgba(47, 125, 87, 0.08);
+}
+
+.critter-card.is-unavailable {
+  background: #fafaf7;
+}
+
+.critter-card.is-unavailable img,
+.critter-detail-hero.is-unavailable img {
+  filter: grayscale(0.75);
+  opacity: 0.72;
+}
+
+.critter-detail-hero .critter-availability {
+  margin-bottom: 7px;
+}
+
+.critter-now-filter {
+  grid-column: 1 / -1;
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.critter-now-filter input {
+  width: 18px !important;
+  height: 18px;
+  min-height: 18px !important;
+  margin: 0;
+  accent-color: var(--leaf);
+}
+
+.critter-now-filter span {
+  color: var(--leaf-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
