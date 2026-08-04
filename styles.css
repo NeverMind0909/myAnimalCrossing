@@ -1399,3 +1399,245 @@ dd {
   color: var(--leaf-dark);
   font-weight: 900;
 }
+
+.critter-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.critter-tab {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.critter-tab.is-active {
+  border-color: var(--leaf);
+  background: var(--leaf);
+  color: #ffffff;
+}
+
+.critter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.critter-controls label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.critter-controls span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.critter-controls input,
+.critter-controls select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.critter-controls input:focus,
+.critter-controls select:focus,
+.critter-tab:focus-visible,
+.critter-card:focus-visible {
+  outline: 3px solid rgba(47, 125, 87, 0.2);
+  border-color: var(--leaf);
+}
+
+.critter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.critter-summary h3 {
+  margin: 0;
+  color: var(--leaf-dark);
+  font-size: 1rem;
+}
+
+.critter-summary span {
+  min-width: 48px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf7f0;
+  color: var(--leaf-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.critter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.critter-card {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 8px;
+  min-height: 190px;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+
+.critter-card img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.critter-card strong {
+  min-height: 2.4em;
+  color: var(--leaf-dark);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
+.critter-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.critter-prices {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+
+.critter-prices span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 25px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: #fff8df;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.critter-prices b {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.critter-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.critter-detail-hero {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.critter-detail-hero img {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.critter-detail-hero h3 {
+  margin: 0;
+  color: var(--leaf-dark);
+  font-size: 1.18rem;
+  line-height: 1.25;
+}
+
+.critter-detail-hero p {
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.critter-detail-list {
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.critter-detail-list div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.critter-detail-list div:last-child {
+  border-bottom: 0;
+}
+
+.critter-detail-list dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.critter-detail-list dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 360px) {
+  .critter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .critter-detail-hero {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .critter-detail-hero img {
+    width: 88px;
+    height: 88px;
+  }
+}

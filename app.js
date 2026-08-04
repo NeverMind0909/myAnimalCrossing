@@ -916,7 +916,7 @@ function renderFilters() {
   });
 }
 function getSearchResults() {
-  return state.villagers.filter((villager) => matchesQuery(villager) && matchesFilters(villager)).slice(0, 36);
+  return state.villagers.filter((villager) => matchesQuery(villager) && matchesFilters(villager));
 }
 
 function createOwnershipMarks(villagerId) {
