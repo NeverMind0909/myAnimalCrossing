@@ -4,8 +4,8 @@ const OWNED_KEY = "acnh-owned-villagers-by-island-v1";
 const WISHLIST_KEY = "acnh-wishlist-by-island-v1";
 const LEGACY_OWNED_KEY = "acnh-owned-villagers-v2";
 const AUTH_KEY = "acnh-login-id-v1";
-const DATA_CACHE_KEY = "acnh-villagers-api-cache-v7";
-const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v7";
+const DATA_CACHE_KEY = "acnh-villagers-api-cache-v8";
+const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v8";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
 const DETAIL_CACHE_KEY = "acnh-villager-detail-cache-v4";
 const SONG_CACHE_KEY = "acnh-song-ko-cache-v1";
@@ -40,7 +40,7 @@ const EXTRA_VILLAGER_TITLES = [
   "Zoe",
   "Rilla",
   "Marty",
-  "Étoile",
+  "\u00c9toile",
   "Chai",
   "Chelsea",
   "Toby",
@@ -206,6 +206,7 @@ const state = {
 const els = {
   dataStatus: document.querySelector("#dataStatus"),
   ownedCount: document.querySelector("#ownedCount"),
+  wishlistCount: document.querySelector("#wishlistCount"),
   searchInput: document.querySelector("#searchInput"),
   searchResults: document.querySelector("#searchResults"),
   personalityFilter: document.querySelector("#personalityFilter"),
@@ -213,11 +214,14 @@ const els = {
   genderFilter: document.querySelector("#genderFilter"),
   amiiboSeriesFilter: document.querySelector("#amiiboSeriesFilter"),
   ownedVillagers: document.querySelector("#ownedVillagers"),
+  wishlistVillagers: document.querySelector("#wishlistVillagers"),
   ownedSummary: document.querySelector("#ownedSummary"),
   ownedTitle: document.querySelector("#owned-title"),
+  wishlistTitle: document.querySelector("#wishlist-title"),
   template: document.querySelector("#villagerCardTemplate"),
   searchView: document.querySelector("#searchView"),
   ownedView: document.querySelector("#ownedView"),
+  wishlistView: document.querySelector("#wishlistView"),
   tipsMysteryView: document.querySelector("#tipsMysteryView"),
   tipsCritterView: document.querySelector("#tipsCritterView"),
   turnipView: document.querySelector("#turnipView"),
@@ -1352,12 +1356,89 @@ function renderOwned() {
 
   els.ownedVillagers.append(fragment);
 }
+function renderWishlist() {
+  const island = state.currentIsland;
+  const editable = canEditIsland(island);
+  const wishlistVillagers = [...getIslandWishlistIds(island)]
+    .map((id) => state.villagers.find((villager) => villager.id === id))
+    .filter(Boolean);
+
+  els.wishlistCount.textContent = `${wishlistVillagers.length}명`;
+  els.wishlistVillagers.replaceChildren();
+
+  if (!wishlistVillagers.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = editable
+      ? "검색 결과에서 주민을 찜해 보세요."
+      : "아직 찜한 주민이 없습니다.";
+    els.wishlistVillagers.append(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  wishlistVillagers.forEach((villager) => {
+    const item = document.createElement("article");
+    item.className = "owned-item wishlist-item";
+
+    const image = document.createElement("img");
+    image.width = 48;
+    image.height = 48;
+    image.src = villager.image;
+    image.alt = `${villager.name} 이미지`;
+    image.loading = "lazy";
+    image.addEventListener("error", () => {
+      image.src = fallbackImage;
+    });
+    const portrait = document.createElement("div");
+    portrait.className = "owned-portrait";
+    portrait.append(image, createOwnershipMarks(villager.id));
+
+    const meta = document.createElement("div");
+    meta.className = "owned-meta";
+    const name = document.createElement("strong");
+    name.textContent = villager.name;
+    const detail = document.createElement("span");
+    detail.textContent = `${villager.personality} · ${villager.species || "종족 정보 없음"}`;
+    meta.append(name, detail);
+
+    const remove = document.createElement("button");
+    remove.className = "remove-button wishlist-remove-button";
+    remove.type = "button";
+    remove.textContent = editable ? "찜 해제" : "조회만";
+    remove.disabled = !editable;
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!editable) return;
+      getIslandWishlistIds(island).delete(villager.id);
+      saveOwned();
+      render();
+    });
+
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.setAttribute("aria-label", `${villager.name} 상세 보기`);
+    item.addEventListener("click", () => openVillagerDetail(villager.id));
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openVillagerDetail(villager.id);
+      }
+    });
+
+    item.append(portrait, meta, remove);
+    fragment.append(item);
+  });
+
+  els.wishlistVillagers.append(fragment);
+}
 function render() {
   els.dataStatus.textContent = "";
   els.dataStatus.hidden = true;
   renderFilters();
   renderSearchResults();
   renderOwned();
+  renderWishlist();
 }
 
 function setVillagers(villagers, dataSource) {
@@ -1397,21 +1478,23 @@ function isTipsView(view) {
 
 function setView(view, island = state.currentIsland) {
   if (view === "owned") view = "island";
-  if (view !== "search" && view !== "island" && view !== "villager-detail" && view !== "turnip" && view !== "app-info" && !isTipsView(view)) view = "search";
+  if (view !== "search" && view !== "island" && view !== "wishlist" && view !== "villager-detail" && view !== "turnip" && view !== "app-info" && !isTipsView(view)) view = "search";
 
-  if (view === "island" && ISLAND_LABELS[island]) {
+  if ((view === "island" || view === "wishlist") && ISLAND_LABELS[island]) {
     state.currentIsland = island;
   }
 
   state.currentView = view;
   els.searchView.hidden = view !== "search";
   els.ownedView.hidden = view !== "island";
+  els.wishlistView.hidden = view !== "wishlist";
   els.tipsMysteryView.hidden = view !== "tips-mystery";
   els.tipsCritterView.hidden = view !== "tips-critter";
   els.turnipView.hidden = view !== "turnip";
   els.appInfoView.hidden = view !== "app-info";
   els.villagerDetailView.hidden = view !== "villager-detail";
   els.ownedTitle.textContent = ISLAND_LABELS[state.currentIsland];
+  els.wishlistTitle.textContent = ISLAND_LABELS[state.currentIsland].replace(" 주민", " 찜");
   setTipsMenuOpen(isTipsView(view));
 
   els.sidebarLinks.forEach((link) => {
@@ -1419,19 +1502,20 @@ function setView(view, island = state.currentIsland) {
       ? false
       : view === "search"
       ? link.dataset.view === "search"
-      : view === "island"
-        ? link.dataset.view === "island" && link.dataset.island === state.currentIsland
+      : view === "island" || view === "wishlist"
+        ? link.dataset.view === view && link.dataset.island === state.currentIsland
         : link.dataset.view === view;
     link.classList.toggle("is-active", isActive);
   });
 
-  const hash = view === "island" ? `#${state.currentIsland}` : view === "villager-detail" ? "#villager-detail" : `#${view}`;
+  const hash = view === "island" ? `#${state.currentIsland}` : view === "wishlist" ? `#${state.currentIsland}-wishlist` : view === "villager-detail" ? "#villager-detail" : `#${view}`;
   if (location.hash !== hash) {
     history.replaceState(null, "", hash);
   }
 
   if (view === "villager-detail") renderVillagerDetail(getSelectedVillager());
   renderOwned();
+  renderWishlist();
 }
 
 function readViewFromHash() {
@@ -1440,6 +1524,12 @@ function readViewFromHash() {
   }
   if (location.hash === "#kongboki" || location.hash === "#owned") {
     return { view: "island", island: "kongboki" };
+  }
+  if (location.hash === "#kongboki-wishlist") {
+    return { view: "wishlist", island: "kongboki" };
+  }
+  if (location.hash === "#kongsolki-wishlist") {
+    return { view: "wishlist", island: "kongsolki" };
   }
   if (location.hash === "#tips-mystery") {
     return { view: "tips-mystery", island: state.currentIsland };

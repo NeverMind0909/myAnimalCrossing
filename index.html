@@ -115,8 +115,14 @@
         <button class="sidebar-link" type="button" data-view="island" data-island="kongboki">
           콩보키섬 주민
         </button>
+        <button class="sidebar-link" type="button" data-view="wishlist" data-island="kongboki">
+          콩보키섬 찜
+        </button>
         <button class="sidebar-link" type="button" data-view="island" data-island="kongsolki">
           콩솔키섬 주민
+        </button>
+        <button class="sidebar-link" type="button" data-view="wishlist" data-island="kongsolki">
+          콩솔키섬 찜
         </button>
         <button class="sidebar-link" type="button" data-view="turnip">
           무값 예측기
@@ -242,6 +248,21 @@
         </div>
         <div id="ownedSummary" class="owned-summary" aria-live="polite"></div>
         <div id="ownedVillagers" class="owned-list" aria-live="polite"></div>
+      </section>
+
+
+      <section
+        id="wishlistView"
+        class="view-panel wishlist-panel"
+        data-view="wishlist"
+        aria-labelledby="wishlist-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="wishlist-title">콩보키섬 찜</h2>
+          <span id="wishlistCount" class="status-pill">0명</span>
+        </div>
+        <div id="wishlistVillagers" class="owned-list wishlist-list" aria-live="polite"></div>
       </section>
 
 
@@ -416,6 +437,6 @@
     <script src="./turnips.js?v=20260805-5"></script>
     <script src="./critters.js?v=20260805-4"></script>
     <script src="./soopoolleaf-data.js"></script>
-    <script src="./app.js?v=20260805-12" defer></script>
+    <script src="./app.js?v=20260826-1" defer></script>
   </body>
 </html>

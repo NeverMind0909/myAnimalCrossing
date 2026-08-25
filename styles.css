@@ -1943,3 +1943,6 @@ dd {
   outline: 3px solid rgba(47, 125, 87, 0.2);
   border-color: var(--leaf);
 }
+.wishlist-remove-button {
+  min-width: 68px;
+}
