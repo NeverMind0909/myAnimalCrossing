@@ -4,10 +4,10 @@ const OWNED_KEY = "acnh-owned-villagers-by-island-v1";
 const WISHLIST_KEY = "acnh-wishlist-by-island-v1";
 const LEGACY_OWNED_KEY = "acnh-owned-villagers-v2";
 const AUTH_KEY = "acnh-login-id-v1";
-const DATA_CACHE_KEY = "acnh-villagers-api-cache-v8";
-const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v8";
+const DATA_CACHE_KEY = "acnh-villagers-api-cache-v10";
+const DATA_CACHE_TIME_KEY = "acnh-villagers-api-cache-time-v10";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
-const DETAIL_CACHE_KEY = "acnh-villager-detail-cache-v4";
+const DETAIL_CACHE_KEY = "acnh-villager-detail-cache-v6";
 const SONG_CACHE_KEY = "acnh-song-ko-cache-v1";
 const ACCOUNT_ISLANDS = {
   "0726": "kongboki",
@@ -20,6 +20,15 @@ const ISLAND_LABELS = {
 };
 const SYNC_CONFIG = window.ACNH_SYNC_CONFIG || {};
 const SOOPOLLEAF_DETAILS = window.SOOPOLLEAF_VILLAGER_DETAILS || {};
+const SANRIO_IMAGE_FILES = {
+  Rilla: "https://dodo.ac/np/images/2/25/Rilla_NH_Model.png",
+  Marty: "https://dodo.ac/np/images/e/e1/Marty_NH_Model.png",
+  "\u00c9toile": "https://dodo.ac/np/images/d/d9/%C3%89toile_NH_Model.png",
+  Chai: "https://dodo.ac/np/images/8/84/Chai_NH_Model.png",
+  Chelsea: "https://dodo.ac/np/images/c/c1/Chelsea_NH_Model.png",
+  Toby: "https://dodo.ac/np/images/5/59/Toby_NH_Model.png",
+};
+const SANRIO_VILLAGER_NAMES = new Set(Object.keys(SANRIO_IMAGE_FILES));
 
 const EXTRA_VILLAGER_TITLES = [
   "Ace",
@@ -198,6 +207,7 @@ const state = {
   loginId: "",
   menuOpen: false,
   previousView: "search",
+  previousIsland: "kongboki",
   selectedVillagerId: "",
   detailCache: readJson(DETAIL_CACHE_KEY, {}),
   songCache: readJson(SONG_CACHE_KEY, {}),
@@ -361,9 +371,9 @@ function getWikiField(content, fieldName) {
 }
 
 function toWikiImageUrl(fileName) {
+  if (/^https?:\/\//i.test(fileName)) return fileName;
   return `https://nookipedia.com/wiki/Special:Redirect/file/${encodeURIComponent(fileName)}`;
 }
-
 
 function translateValue(map, value) {
   const cleaned = cleanWikiText(value);
@@ -523,11 +533,19 @@ function toKoreanBirthdayFromWiki(monthName, dayValue) {
   return month && day ? `${month}월 ${day}일` : "알 수 없음";
 }
 
+function isSanrioVillager(villager) {
+  const englishName = typeof villager === "string" ? villager : villager?.englishName;
+  return SANRIO_VILLAGER_NAMES.has(englishName);
+}
+
+function getVillagerImageFile(englishName, imageFile) {
+  return SANRIO_IMAGE_FILES[englishName] || imageFile;
+}
 function normalizeNookipediaVillager(title, content) {
   const nhInfo = getTemplateBlock(content, "NHVillagerInfo") || content;
   const nhHouse = getTemplateBlock(content, "NHHouse");
   const englishName = cleanWikiText(getWikiField(nhInfo, "name") || getWikiField(content, "name")) || title;
-  const imageFile = getWikiField(nhInfo, "image") || getWikiField(content, "image");
+  const imageFile = getVillagerImageFile(englishName, getWikiField(nhInfo, "image") || getWikiField(content, "image"));
   const cardInfo = getAmiiboInfo(getTemplateField(content, "A-card", "front") || getWikiField(content, "front"));
   const rawGender = cleanWikiText(getWikiField(nhInfo, "gender"));
   const rawPersonality = cleanWikiText(getWikiField(nhInfo, "personality"));
@@ -721,9 +739,9 @@ function saveLocalSharedState() {
   writeJson(WISHLIST_KEY, serializeIslandSets(state.wishlistByIsland));
 }
 
-function saveOwned() {
+function saveOwned(changedIsland = "") {
   saveLocalSharedState();
-  syncSharedState();
+  syncSharedState(changedIsland);
 }
 
 function loadWishlist() {
@@ -760,12 +778,24 @@ function getRemoteHeaders(extraHeaders = {}) {
   );
 }
 
-function getSharedState() {
+function getSharedState(source = state) {
   return {
-    owned: serializeIslandSets(state.ownedByIsland),
-    wishlist: serializeIslandSets(state.wishlistByIsland),
+    owned: serializeIslandSets(source.ownedByIsland),
+    wishlist: serializeIslandSets(source.wishlistByIsland),
     updatedAt: new Date().toISOString(),
   };
+}
+
+function mergeSharedStateForSave(remoteData, changedIsland) {
+  if (!changedIsland || !ISLAND_LABELS[changedIsland] || !remoteData) return getSharedState();
+
+  const merged = {
+    ownedByIsland: toIslandSets(remoteData?.owned || remoteData?.ownedByIsland),
+    wishlistByIsland: toIslandSets(remoteData?.wishlist || remoteData?.wishlistByIsland),
+  };
+  merged.ownedByIsland[changedIsland] = new Set(state.ownedByIsland[changedIsland] || []);
+  merged.wishlistByIsland[changedIsland] = new Set(state.wishlistByIsland[changedIsland] || []);
+  return getSharedState(merged);
 }
 
 function applySharedState(data) {
@@ -795,17 +825,30 @@ async function loadRemoteSharedState() {
   }
 }
 
-async function syncSharedState() {
+async function syncSharedState(changedIsland = "") {
   if (!hasRemoteSyncConfig()) return;
   const { rowId } = getSupabaseConfig();
 
   try {
+    let remoteData = null;
+    if (changedIsland) {
+      const loadUrl = `${getSupabaseTableUrl()}?id=eq.${encodeURIComponent(rowId)}&select=data`;
+      const loadResponse = await fetch(loadUrl, {
+        cache: "no-store",
+        headers: getRemoteHeaders(),
+      });
+      if (loadResponse.ok) {
+        const rows = await loadResponse.json();
+        remoteData = rows?.[0]?.data || null;
+      }
+    }
+
     const response = await fetch(getSupabaseTableUrl(), {
       method: "POST",
       headers: getRemoteHeaders({ Prefer: "resolution=merge-duplicates" }),
       body: JSON.stringify({
         id: rowId,
-        data: getSharedState(),
+        data: mergeSharedStateForSave(remoteData, changedIsland),
         updated_at: new Date().toISOString(),
       }),
     });
@@ -886,7 +929,7 @@ function getFilterValue(villager, filterName) {
   if (filterName === "personality") return villager.personality || "정보 없음";
   if (filterName === "species") return villager.species || "정보 없음";
   if (filterName === "gender") return villager.gender || "정보 없음";
-  if (filterName === "amiiboSeries") return villager.amiiboSeries || "정보 없음";
+  if (filterName === "amiiboSeries") return isSanrioVillager(villager) ? "산리오" : villager.amiiboSeries || "정보 없음";
   return "정보 없음";
 }
 
@@ -1035,7 +1078,7 @@ function renderVillagerDetail(villager, loading = false) {
   backButton.className = "tour-back-button";
   backButton.type = "button";
   backButton.textContent = "← 목록";
-  backButton.addEventListener("click", () => setView(state.previousView, state.currentIsland));
+  backButton.addEventListener("click", () => setView(state.previousView, state.previousIsland));
 
   const hero = document.createElement("div");
   hero.className = "villager-detail-hero";
@@ -1108,7 +1151,10 @@ function renderVillagerDetail(villager, loading = false) {
 async function openVillagerDetail(villagerId) {
   const villager = state.villagers.find((item) => item.id === villagerId);
   if (!villager) return;
-  state.previousView = state.currentView === "villager-detail" ? state.previousView : state.currentView;
+  if (state.currentView !== "villager-detail") {
+    state.previousView = state.currentView;
+    state.previousIsland = state.currentIsland;
+  }
   state.selectedVillagerId = villagerId;
   setView("villager-detail", state.currentIsland);
   renderVillagerDetail(villager, true);
@@ -1178,7 +1224,7 @@ function createVillagerCard(villager) {
     }
     getIslandOwnedIds(loginIsland).add(villager.id);
     getIslandWishlistIds(loginIsland).delete(villager.id);
-    saveOwned();
+    saveOwned(loginIsland);
     render();
   });
 
@@ -1194,7 +1240,7 @@ function createVillagerCard(villager) {
     } else {
       wishlistIds.add(villager.id);
     }
-    saveOwned();
+    saveOwned(loginIsland);
     render();
   });
 
@@ -1335,7 +1381,7 @@ function renderOwned() {
       event.stopPropagation();
       if (!editable) return;
       getIslandOwnedIds(island).delete(villager.id);
-      saveOwned();
+      saveOwned(island);
       render();
     });
 
@@ -1411,7 +1457,7 @@ function renderWishlist() {
       event.stopPropagation();
       if (!editable) return;
       getIslandWishlistIds(island).delete(villager.id);
-      saveOwned();
+      saveOwned(island);
       render();
     });
 

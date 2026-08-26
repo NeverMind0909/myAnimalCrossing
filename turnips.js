@@ -51,7 +51,58 @@
   }
 
   function formatPercent(value) {
-    return `${Math.round((Number(value) || 0) * 100)}%`;
+    const percent = (Number(value) || 0) * 100;
+    if (percent > 0 && percent < 1) return "<1%";
+    return `${Math.round(percent)}%`;
+  }
+
+  function getSlotProbabilityRanges(patterns, index) {
+    const totals = new Map();
+    patterns.forEach((pattern) => {
+      const price = pattern.prices?.[index];
+      if (!price) return;
+      const key = price.min === price.max ? String(price.min) : `${price.min}~${price.max}`;
+      const previous = totals.get(key) || { label: key, probability: 0 };
+      previous.probability += Number(pattern.probability) || 0;
+      totals.set(key, previous);
+    });
+
+    return [...totals.values()]
+      .filter((item) => item.probability > 0)
+      .sort((a, b) => b.probability - a.probability || a.label.localeCompare(b.label, "ko", { numeric: true }));
+  }
+
+  function renderSlotProbabilityRanges(patterns, index) {
+    const ranges = getSlotProbabilityRanges(patterns, index);
+    const wrap = document.createElement("div");
+    wrap.className = "turnip-slot-chances";
+
+    ranges.slice(0, 4).forEach((range) => {
+      const line = document.createElement("div");
+      line.className = "turnip-chance-line";
+      const label = document.createElement("span");
+      label.className = "turnip-chance-label";
+      label.textContent = `${range.label}벨`;
+      const bar = document.createElement("span");
+      bar.className = "turnip-chance-bar";
+      const fill = document.createElement("i");
+      fill.style.width = `${Math.max(4, Math.min(100, range.probability * 100))}%`;
+      bar.append(fill);
+      const probability = document.createElement("strong");
+      probability.textContent = formatPercent(range.probability);
+      line.append(label, bar, probability);
+      wrap.append(line);
+    });
+
+    const hiddenProbability = ranges.slice(4).reduce((sum, range) => sum + range.probability, 0);
+    if (hiddenProbability > 0.005) {
+      const more = document.createElement("p");
+      more.className = "turnip-chance-more";
+      more.textContent = `기타 구간 ${formatPercent(hiddenProbability)}`;
+      wrap.append(more);
+    }
+
+    return wrap;
   }
 
   function getCurrentSlotKey() {
@@ -249,14 +300,22 @@
 
     const table = document.createElement("div");
     table.className = "turnip-result-table";
-    priceSlots.forEach(([, label, index]) => {
+    const currentSlotKey = getCurrentSlotKey();
+    priceSlots.forEach(([key, label, index]) => {
       const row = document.createElement("div");
-      row.className = best.index === index ? "is-best" : "";
+      row.className = [
+        "turnip-result-row",
+        best.index === index ? "is-best" : "",
+        key === currentSlotKey ? "is-current" : "",
+      ].filter(Boolean).join(" ");
+      const header = document.createElement("div");
+      header.className = "turnip-result-row-header";
       const name = document.createElement("span");
       name.textContent = label;
       const value = document.createElement("strong");
       value.textContent = formatPriceRange(global.prices[index]);
-      row.append(name, value);
+      header.append(name, value);
+      row.append(header, renderSlotProbabilityRanges(patterns, index));
       table.append(row);
     });
     wrap.append(table);
