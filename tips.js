@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const data = window.ACNH_TOUR_TIPS;
   if (!data) return;
 
@@ -114,10 +114,15 @@
     return island.koreanName || island.name;
   }
 
+  // Fandom's file redirect is frequently blocked or changed. Prefer the
+  // stable Nookipedia image mapping and keep the original URL as a fallback.
+  function getIslandImage(island) {
+    return fallbackImages[island.id] || island.image || "";
+  }
 
   function applyImageFallback(image, island) {
-    const fallback = fallbackImages[island.id];
-    if (!fallback) return;
+    const fallback = island.image;
+    if (!fallback || image.src === fallback) return;
     image.addEventListener("error", () => {
       if (image.src !== fallback) image.src = fallback;
     }, { once: true });
@@ -127,7 +132,7 @@
     card.setAttribute("aria-label", `${getDisplayName(island)} 상세 보기`);
 
     const image = document.createElement("img");
-    image.src = island.image;
+    image.src = getIslandImage(island);
     image.alt = `${getDisplayName(island)} 지도`;
     image.loading = "lazy";
     applyImageFallback(image, island);
@@ -175,7 +180,7 @@
 
     const image = document.createElement("img");
     image.className = "tour-detail-image";
-    image.src = island.image;
+    image.src = getIslandImage(island);
     image.alt = `${getDisplayName(island)} 지도`;
     applyImageFallback(image, island);
 
