@@ -117,7 +117,7 @@
   // Fandom's file redirect is frequently blocked or changed. Prefer the
   // stable Nookipedia image mapping and keep the original URL as a fallback.
   function getIslandImage(island) {
-    return fallbackImages[island.id] || island.image || "";
+    return window.ACNH_LOCAL_ISLAND_IMAGES?.[island.id] || fallbackImages[island.id] || island.image || "";
   }
 
   function applyImageFallback(image, island) {

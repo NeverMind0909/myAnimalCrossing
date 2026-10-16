@@ -1836,6 +1836,16 @@ dd {
   font-size: 0.86rem;
 }
 
+.turnip-best-chances {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding-left: 22px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
 .turnip-result {
   display: grid;
   gap: 12px;
@@ -1886,6 +1896,11 @@ dd {
 
 .turnip-result-row.is-current {
   box-shadow: inset 4px 0 0 var(--leaf);
+}
+
+.turnip-result-row.is-past {
+  background: #eef0ec;
+  opacity: 0.58;
 }
 
 .turnip-result-row-header {

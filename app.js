@@ -739,9 +739,23 @@ function saveLocalSharedState() {
   writeJson(WISHLIST_KEY, serializeIslandSets(state.wishlistByIsland));
 }
 
+let sharedSyncQueue = Promise.resolve();
+
+function queueSharedStateSync(changedIsland = "") {
+  sharedSyncQueue = sharedSyncQueue
+    .catch(() => undefined)
+    .then(() => syncSharedState(changedIsland));
+  return sharedSyncQueue;
+}
+
 function saveOwned(changedIsland = "") {
   saveLocalSharedState();
-  syncSharedState(changedIsland);
+  queueSharedStateSync(changedIsland);
+}
+
+function saveWishlist(changedIsland = "") {
+  saveLocalSharedState();
+  queueSharedStateSync(changedIsland);
 }
 
 function loadWishlist() {
@@ -1240,7 +1254,7 @@ function createVillagerCard(villager) {
     } else {
       wishlistIds.add(villager.id);
     }
-    saveOwned(loginIsland);
+    saveWishlist(loginIsland);
     render();
   });
 
@@ -1457,7 +1471,7 @@ function renderWishlist() {
       event.stopPropagation();
       if (!editable) return;
       getIslandWishlistIds(island).delete(villager.id);
-      saveOwned(island);
+      saveWishlist(island);
       render();
     });
 

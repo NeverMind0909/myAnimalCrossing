@@ -77,7 +77,7 @@
     const wrap = document.createElement("div");
     wrap.className = "turnip-slot-chances";
 
-    ranges.slice(0, 4).forEach((range) => {
+    ranges.forEach((range) => {
       const line = document.createElement("div");
       line.className = "turnip-chance-line";
       const label = document.createElement("span");
@@ -94,14 +94,6 @@
       wrap.append(line);
     });
 
-    const hiddenProbability = ranges.slice(4).reduce((sum, range) => sum + range.probability, 0);
-    if (hiddenProbability > 0.005) {
-      const more = document.createElement("p");
-      more.className = "turnip-chance-more";
-      more.textContent = `기타 구간 ${formatPercent(hiddenProbability)}`;
-      wrap.append(more);
-    }
-
     return wrap;
   }
 
@@ -112,6 +104,16 @@
     if (day < 1 || day > 6) return "";
     const period = now.getHours() < 12 ? "am" : "pm";
     return priceSlots.find(([, , , slotDay, slotPeriod]) => slotDay === day && slotPeriod === period)?.[0] || "";
+  }
+
+  function getCurrentPriceIndex() {
+    const currentKey = getCurrentSlotKey();
+    return priceSlots.find(([key]) => key === currentKey)?.[2] ?? null;
+  }
+
+  function isPastPriceSlot(index) {
+    const currentIndex = getCurrentPriceIndex();
+    return currentIndex !== null && index < currentIndex;
   }
 
   function getInputPrices() {
@@ -262,10 +264,11 @@
   }
 
   function getBestSlot(global) {
-    const future = priceSlots
+    const allSlots = priceSlots
       .map(([key, label, index]) => ({ key, label, index, price: global.prices[index] }))
-      .filter((slot) => slot.price && slot.price.min !== slot.price.max);
-    const target = future.length ? future : priceSlots.map(([key, label, index]) => ({ key, label, index, price: global.prices[index] }));
+      .filter((slot) => slot.price);
+    const futureSlots = allSlots.filter((slot) => !isPastPriceSlot(slot.index));
+    const target = futureSlots.length ? futureSlots : allSlots;
     return target.sort((a, b) => b.price.max - a.price.max || b.price.min - a.price.min)[0];
   }
 
@@ -285,7 +288,15 @@
     const best = getBestSlot(global);
     const summary = document.createElement("div");
     summary.className = "turnip-summary-card";
-    summary.innerHTML = `<span>최고 예상</span><strong>${best.label} ${formatPriceRange(best.price)}</strong><p>이번 주 최고 가능 범위는 ${global.weekMax}벨입니다.</p>`;
+    summary.innerHTML = `<span>\uC774\uBC88 \uC8FC \uCD5C\uACE0 \uC608\uC0C1</span><strong>${best.label}</strong>`;
+    const bestChanceList = document.createElement("ol");
+    bestChanceList.className = "turnip-best-chances";
+    getSlotProbabilityRanges(patterns, best.index).slice(0, 2).forEach((range) => {
+      const item = document.createElement("li");
+      item.textContent = `${range.label}\uBCA8 (${formatPercent(range.probability)})`;
+      bestChanceList.append(item);
+    });
+    summary.append(bestChanceList);
     wrap.append(summary);
 
     const patternGrid = document.createElement("div");
@@ -306,6 +317,7 @@
       row.className = [
         "turnip-result-row",
         best.index === index ? "is-best" : "",
+        isPastPriceSlot(index) ? "is-past" : "",
         key === currentSlotKey ? "is-current" : "",
       ].filter(Boolean).join(" ");
       const header = document.createElement("div");
