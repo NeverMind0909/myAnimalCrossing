@@ -1,6 +1,7 @@
 const BASE_DATA_API_URL = "https://raw.githubusercontent.com/alexislours/ACNHAPI/master/villagers.json";
 const NOOKIPEDIA_API_URL = "https://nookipedia.com/w/api.php";
 const OWNED_KEY = "acnh-owned-villagers-by-island-v1";
+const DEPARTED_KEY = "acnh-departed-villagers-by-island-v1";
 const WISHLIST_KEY = "acnh-wishlist-by-island-v1";
 const LEGACY_OWNED_KEY = "acnh-owned-villagers-v2";
 const AUTH_KEY = "acnh-login-id-v1";
@@ -19,6 +20,12 @@ const ISLAND_LABELS = {
   kongsolki: "콩솔키섬 주민",
 };
 const SYNC_CONFIG = window.ACNH_SYNC_CONFIG || {};
+const COLLECTION_PLACEHOLDER_LABELS = {
+  "collection-fossils": "\uD654\uC11D",
+  "collection-bugs": "\uACE4\uCDA9",
+  "collection-fish": "\uBB3C\uACE0\uAE30",
+  "collection-sea": "\uD574\uC0B0\uBB3C",
+};
 const SOOPOLLEAF_DETAILS = window.SOOPOLLEAF_VILLAGER_DETAILS || {};
 const SANRIO_IMAGE_FILES = {
   Rilla: "https://dodo.ac/np/images/2/25/Rilla_NH_Model.png",
@@ -195,6 +202,10 @@ const state = {
     kongboki: new Set(),
     kongsolki: new Set(),
   },
+  departedByIsland: {
+    kongboki: new Set(),
+    kongsolki: new Set(),
+  },
   query: "",
   filters: {
     personality: "",
@@ -217,6 +228,7 @@ const els = {
   dataStatus: document.querySelector("#dataStatus"),
   ownedCount: document.querySelector("#ownedCount"),
   wishlistCount: document.querySelector("#wishlistCount"),
+  departedCount: document.querySelector("#departedCount"),
   searchInput: document.querySelector("#searchInput"),
   searchResults: document.querySelector("#searchResults"),
   personalityFilter: document.querySelector("#personalityFilter"),
@@ -225,15 +237,20 @@ const els = {
   amiiboSeriesFilter: document.querySelector("#amiiboSeriesFilter"),
   ownedVillagers: document.querySelector("#ownedVillagers"),
   wishlistVillagers: document.querySelector("#wishlistVillagers"),
+  departedVillagers: document.querySelector("#departedVillagers"),
   ownedSummary: document.querySelector("#ownedSummary"),
   ownedTitle: document.querySelector("#owned-title"),
   wishlistTitle: document.querySelector("#wishlist-title"),
+  departedTitle: document.querySelector("#departed-title"),
   template: document.querySelector("#villagerCardTemplate"),
   searchView: document.querySelector("#searchView"),
   ownedView: document.querySelector("#ownedView"),
   wishlistView: document.querySelector("#wishlistView"),
+  artView: document.querySelector("#artView"),
+  departedView: document.querySelector("#departedView"),
+  collectionView: document.querySelector("#collectionView"),
   tipsMysteryView: document.querySelector("#tipsMysteryView"),
-  tipsCritterView: document.querySelector("#tipsCritterView"),
+  critterGuideView: document.querySelector("#critterGuideView"),
   turnipView: document.querySelector("#turnipView"),
   appInfoView: document.querySelector("#appInfoView"),
   villagerDetailView: document.querySelector("#villagerDetailView"),
@@ -243,6 +260,7 @@ const els = {
   menuOpenButton: document.querySelector("#menuOpenButton"),
   menuCloseButton: document.querySelector("#menuCloseButton"),
   tipsToggleButton: document.querySelector("#tipsToggleButton"),
+  sidebarGroupToggles: document.querySelectorAll(".sidebar-group-toggle"),
   tipsSubmenu: document.querySelector("#tipsSubmenu"),
   loginButton: document.querySelector("#loginButton"),
   loginModal: document.querySelector("#loginModal"),
@@ -734,9 +752,18 @@ function loadOwned() {
   if (shouldSave) saveOwned();
 }
 
+function loadDeparted() {
+  state.departedByIsland = toIslandSets(readJson(DEPARTED_KEY, null));
+}
+
+function getIslandDepartedIds(island = state.currentIsland) {
+  return state.departedByIsland[island] || new Set();
+}
+
 function saveLocalSharedState() {
   writeJson(OWNED_KEY, serializeIslandSets(state.ownedByIsland));
   writeJson(WISHLIST_KEY, serializeIslandSets(state.wishlistByIsland));
+  writeJson(DEPARTED_KEY, serializeIslandSets(state.departedByIsland));
 }
 
 let sharedSyncQueue = Promise.resolve();
@@ -792,10 +819,12 @@ function getRemoteHeaders(extraHeaders = {}) {
   );
 }
 
-function getSharedState(source = state) {
+function getSharedState(source = state, preservedData = {}) {
   return {
+    ...preservedData,
     owned: serializeIslandSets(source.ownedByIsland),
     wishlist: serializeIslandSets(source.wishlistByIsland),
+    departed: serializeIslandSets(source.departedByIsland),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -806,16 +835,19 @@ function mergeSharedStateForSave(remoteData, changedIsland) {
   const merged = {
     ownedByIsland: toIslandSets(remoteData?.owned || remoteData?.ownedByIsland),
     wishlistByIsland: toIslandSets(remoteData?.wishlist || remoteData?.wishlistByIsland),
+    departedByIsland: toIslandSets(remoteData?.departed || remoteData?.departedByIsland),
   };
   merged.ownedByIsland[changedIsland] = new Set(state.ownedByIsland[changedIsland] || []);
   merged.wishlistByIsland[changedIsland] = new Set(state.wishlistByIsland[changedIsland] || []);
-  return getSharedState(merged);
+  merged.departedByIsland[changedIsland] = new Set(state.departedByIsland[changedIsland] || []);
+  return getSharedState(merged, remoteData);
 }
 
 function applySharedState(data) {
   if (!data || typeof data !== "object") return;
   state.ownedByIsland = toIslandSets(data.owned || data.ownedByIsland);
   state.wishlistByIsland = toIslandSets(data.wishlist || data.wishlistByIsland);
+  state.departedByIsland = toIslandSets(data.departed || data.departedByIsland);
   saveLocalSharedState();
   render();
 }
@@ -905,6 +937,7 @@ function saveLogin(id) {
   state.loginId = String(id).trim();
   writeJson(AUTH_KEY, state.loginId);
   updateLoginButton();
+  window.dispatchEvent(new CustomEvent("acnh-login-changed", { detail: { loginId: state.loginId } }));
 }
 
 function updateLoginButton() {
@@ -1237,6 +1270,7 @@ function createVillagerCard(villager) {
       return;
     }
     getIslandOwnedIds(loginIsland).add(villager.id);
+    getIslandDepartedIds(loginIsland).delete(villager.id);
     getIslandWishlistIds(loginIsland).delete(villager.id);
     saveOwned(loginIsland);
     render();
@@ -1395,6 +1429,7 @@ function renderOwned() {
       event.stopPropagation();
       if (!editable) return;
       getIslandOwnedIds(island).delete(villager.id);
+      getIslandDepartedIds(island).add(villager.id);
       saveOwned(island);
       render();
     });
@@ -1492,6 +1527,39 @@ function renderWishlist() {
 
   els.wishlistVillagers.append(fragment);
 }
+function renderDeparted() {
+  const island = state.currentIsland;
+  const villagers = [...getIslandDepartedIds(island)]
+    .map((id) => state.villagers.find((villager) => villager.id === id))
+    .filter(Boolean);
+  els.departedCount.textContent = `${villagers.length}명`;
+  els.departedVillagers.replaceChildren();
+  if (!villagers.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "이 섬에서 떠난 주민이 없습니다.";
+    els.departedVillagers.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  villagers.forEach((villager) => {
+    const item = document.createElement("article");
+    item.className = "owned-item departed-item";
+    const image = document.createElement("img");
+    image.width = 48; image.height = 48; image.src = villager.image; image.alt = `${villager.name} 이미지`; image.loading = "lazy";
+    image.addEventListener("error", () => { image.src = fallbackImage; });
+    const portrait = document.createElement("div"); portrait.className = "owned-portrait"; portrait.append(image);
+    const meta = document.createElement("div"); meta.className = "owned-meta";
+    const name = document.createElement("strong"); name.textContent = villager.name;
+    const detail = document.createElement("span"); detail.textContent = `${villager.personality} · ${villager.birthday}`;
+    meta.append(name, detail);
+    item.tabIndex = 0; item.setAttribute("role", "button"); item.setAttribute("aria-label", `${villager.name} 상세 보기`);
+    item.addEventListener("click", () => openVillagerDetail(villager.id));
+    item.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVillagerDetail(villager.id); } });
+    item.append(portrait, meta); fragment.append(item);
+  });
+  els.departedVillagers.append(fragment);
+}
 function render() {
   els.dataStatus.textContent = "";
   els.dataStatus.hidden = true;
@@ -1499,6 +1567,7 @@ function render() {
   renderSearchResults();
   renderOwned();
   renderWishlist();
+  renderDeparted();
 }
 
 function setVillagers(villagers, dataSource) {
@@ -1526,21 +1595,28 @@ function setMenuOpen(open) {
   els.sidebarBackdrop.classList.toggle("is-visible", open);
 }
 
+function setSidebarSubmenuOpen(submenuId, open) {
+  const submenu = document.getElementById(submenuId);
+  const toggle = document.querySelector(`[aria-controls="${submenuId}"]`);
+  if (!submenu || !toggle) return;
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  submenu.hidden = !open;
+}
+
 function setTipsMenuOpen(open) {
-  if (!els.tipsToggleButton || !els.tipsSubmenu) return;
-  els.tipsToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
-  els.tipsSubmenu.hidden = !open;
+  setSidebarSubmenuOpen("tipsSubmenu", open);
 }
 
 function isTipsView(view) {
-  return view === "tips-mystery" || view === "tips-critter";
+  return view === "tips-mystery";
 }
 
 function setView(view, island = state.currentIsland) {
   if (view === "owned") view = "island";
-  if (view !== "search" && view !== "island" && view !== "wishlist" && view !== "villager-detail" && view !== "turnip" && view !== "app-info" && !isTipsView(view)) view = "search";
+  if (view === "collection") view = "collection-art";
+  if (view !== "search" && view !== "island" && view !== "wishlist" && view !== "departed" && view !== "collection" && view !== "collection-art" && view !== "collection-critter" && view !== "collection-bugs" && view !== "collection-fish" && view !== "collection-sea" && !COLLECTION_PLACEHOLDER_LABELS[view] && view !== "villager-detail" && view !== "turnip" && view !== "app-info" && !isTipsView(view)) view = "search";
 
-  if ((view === "island" || view === "wishlist") && ISLAND_LABELS[island]) {
+  if ((view === "island" || view === "wishlist" || view === "departed") && ISLAND_LABELS[island]) {
     state.currentIsland = island;
   }
 
@@ -1548,13 +1624,25 @@ function setView(view, island = state.currentIsland) {
   els.searchView.hidden = view !== "search";
   els.ownedView.hidden = view !== "island";
   els.wishlistView.hidden = view !== "wishlist";
+  els.departedView.hidden = view !== "departed";
+  els.collectionView.hidden = !COLLECTION_PLACEHOLDER_LABELS[view];
+  els.artView.hidden = view !== "collection-art";
   els.tipsMysteryView.hidden = view !== "tips-mystery";
-  els.tipsCritterView.hidden = view !== "tips-critter";
+  els.critterGuideView.hidden = !["collection-critter", "collection-bugs", "collection-fish", "collection-sea"].includes(view);
   els.turnipView.hidden = view !== "turnip";
   els.appInfoView.hidden = view !== "app-info";
   els.villagerDetailView.hidden = view !== "villager-detail";
   els.ownedTitle.textContent = ISLAND_LABELS[state.currentIsland];
   els.wishlistTitle.textContent = ISLAND_LABELS[state.currentIsland].replace(" 주민", " 찜");
+  els.departedTitle.textContent = ISLAND_LABELS[state.currentIsland].replace(" 주민", " 떠남");
+  if (COLLECTION_PLACEHOLDER_LABELS[view]) {
+    els.collectionView.querySelector("h2").textContent = `${COLLECTION_PLACEHOLDER_LABELS[view]} 도감`;
+    els.collectionView.querySelector(".empty-state").textContent = `${COLLECTION_PLACEHOLDER_LABELS[view]} 도감은 준비 중입니다.`;
+  }
+  setSidebarSubmenuOpen("kongbokiSubmenu", ["island", "wishlist", "departed"].includes(view) && state.currentIsland === "kongboki");
+  setSidebarSubmenuOpen("kongsolkiSubmenu", ["island", "wishlist", "departed"].includes(view) && state.currentIsland === "kongsolki");
+  setSidebarSubmenuOpen("collectionSubmenu", view === "collection-art" || view === "collection-critter" || view === "collection-bugs" || view === "collection-fish" || view === "collection-sea" || Boolean(COLLECTION_PLACEHOLDER_LABELS[view]));
+  if (["collection-bugs", "collection-fish", "collection-sea"].includes(view)) window.dispatchEvent(new CustomEvent("acnh-critter-group-changed", { detail: { group: view.replace("collection-", "") } }));
   setTipsMenuOpen(isTipsView(view));
 
   els.sidebarLinks.forEach((link) => {
@@ -1562,13 +1650,13 @@ function setView(view, island = state.currentIsland) {
       ? false
       : view === "search"
       ? link.dataset.view === "search"
-      : view === "island" || view === "wishlist"
+      : view === "island" || view === "wishlist" || view === "departed"
         ? link.dataset.view === view && link.dataset.island === state.currentIsland
         : link.dataset.view === view;
     link.classList.toggle("is-active", isActive);
   });
 
-  const hash = view === "island" ? `#${state.currentIsland}` : view === "wishlist" ? `#${state.currentIsland}-wishlist` : view === "villager-detail" ? "#villager-detail" : `#${view}`;
+  const hash = view === "island" ? `#${state.currentIsland}` : view === "wishlist" ? `#${state.currentIsland}-wishlist` : view === "departed" ? `#${state.currentIsland}-departed` : view === "villager-detail" ? "#villager-detail" : `#${view}`;
   if (location.hash !== hash) {
     history.replaceState(null, "", hash);
   }
@@ -1576,6 +1664,7 @@ function setView(view, island = state.currentIsland) {
   if (view === "villager-detail") renderVillagerDetail(getSelectedVillager());
   renderOwned();
   renderWishlist();
+  renderDeparted();
 }
 
 function readViewFromHash() {
@@ -1591,14 +1680,24 @@ function readViewFromHash() {
   if (location.hash === "#kongsolki-wishlist") {
     return { view: "wishlist", island: "kongsolki" };
   }
+  if (location.hash === "#kongboki-departed") {
+    return { view: "departed", island: "kongboki" };
+  }
+  if (location.hash === "#kongsolki-departed") {
+    return { view: "departed", island: "kongsolki" };
+  }
   if (location.hash === "#tips-mystery") {
     return { view: "tips-mystery", island: state.currentIsland };
   }
-  if (location.hash === "#tips-critter") {
-    return { view: "tips-critter", island: state.currentIsland };
-  }
   if (location.hash === "#turnip") {
     return { view: "turnip", island: state.currentIsland };
+  }
+  if (location.hash === "#collection") {
+    return { view: "collection", island: state.currentIsland };
+  }
+  if (location.hash.startsWith("#collection-")) {
+    const collectionView = location.hash.slice(1);
+    if (collectionView === "collection-art" || collectionView === "collection-critter" || ["collection-bugs", "collection-fish", "collection-sea"].includes(collectionView) || COLLECTION_PLACEHOLDER_LABELS[collectionView]) return { view: collectionView, island: state.currentIsland };
   }
   if (location.hash === "#app-info") {
     return { view: "app-info", island: state.currentIsland };
@@ -1666,8 +1765,12 @@ els.searchInput.addEventListener("input", (event) => {
 els.menuOpenButton.addEventListener("click", () => setMenuOpen(true));
 els.menuCloseButton.addEventListener("click", () => setMenuOpen(false));
 els.sidebarBackdrop.addEventListener("click", () => setMenuOpen(false));
-els.tipsToggleButton?.addEventListener("click", () => {
-  setTipsMenuOpen(els.tipsSubmenu.hidden);
+els.sidebarGroupToggles.forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const submenuId = toggle.getAttribute("aria-controls");
+    const submenu = document.getElementById(submenuId);
+    setSidebarSubmenuOpen(submenuId, submenu?.hidden ?? true);
+  });
 });
 els.sidebarLinks.forEach((link) => {
   link.addEventListener("click", () => {
@@ -1705,6 +1808,7 @@ window.addEventListener("hashchange", () => {
 function init() {
   loadOwned();
   loadWishlist();
+  loadDeparted();
   loadLogin();
   const route = readViewFromHash();
   setView(route.view, route.island);

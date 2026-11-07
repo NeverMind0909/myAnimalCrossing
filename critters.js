@@ -7,6 +7,8 @@
   const CACHE_TIME_KEY = "acnh-critter-guide-cache-time-v2";
   const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
   const HEMISPHERE = "northern";
+  const AUTH_KEY = "acnh-login-id-v1";
+  const SYNC_CONFIG = window.ACNH_SYNC_CONFIG || {};
 
   const groups = {
     fish: { label: "물고기", endpoint: "fish.json", imagePath: "fish", specialLabel: "저스틴", specialKey: "price-cj" },
@@ -75,6 +77,9 @@
     critters: { fish: [], bugs: [], sea: [] },
     loading: true,
     error: "",
+    collectionFilter: "all",
+    loginId: "",
+    collected: new Set(),
   };
 
   function readJson(key, fallback) {
@@ -94,6 +99,90 @@
     }
   }
 
+  function getLoginId() {
+    try {
+      const value = JSON.parse(localStorage.getItem(AUTH_KEY) || "\"\"");
+      return value === "0726" || value === "250726" ? value : "";
+    } catch (error) { return ""; }
+  }
+
+  function getSyncConfig() {
+    return {
+      projectUrl: String(SYNC_CONFIG.projectUrl || "").replace(/\/+$/, ""),
+      anonKey: String(SYNC_CONFIG.anonKey || ""),
+      table: String(SYNC_CONFIG.table || "acnh_shared_state"),
+      rowId: String(SYNC_CONFIG.rowId || "main"),
+    };
+  }
+
+  function hasSyncConfig() {
+    const config = getSyncConfig();
+    return Boolean(config.projectUrl && config.anonKey && config.table && config.rowId);
+  }
+
+  function getSyncHeaders(extra) {
+    const config = getSyncConfig();
+    return Object.assign({ apikey: config.anonKey, Authorization: "Bearer " + config.anonKey, "Content-Type": "application/json" }, extra || {});
+  }
+
+  async function fetchSharedData() {
+    if (!hasSyncConfig()) return null;
+    const config = getSyncConfig();
+    const url = config.projectUrl + "/rest/v1/" + encodeURIComponent(config.table) + "?id=eq." + encodeURIComponent(config.rowId) + "&select=data";
+    const response = await fetch(url, { cache: "no-store", headers: getSyncHeaders() });
+    if (!response.ok) throw new Error("생물 수집 데이터 조회 실패: " + response.status);
+    const rows = await response.json();
+    return rows && rows[0] && rows[0].data ? rows[0].data : {};
+  }
+
+  function getCritterLocalKey() { return "acnh-critter-collected-v1-" + (state.loginId || "guest"); }
+
+  function loadLocalCollection() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(getCritterLocalKey()) || "[]");
+      state.collected = new Set(Array.isArray(parsed) ? parsed : []);
+    } catch (error) { state.collected = new Set(); }
+  }
+
+  function saveLocalCollection() { localStorage.setItem(getCritterLocalKey(), JSON.stringify([...state.collected])); }
+
+  async function loadCollectionForLogin() {
+    state.loginId = getLoginId();
+    loadLocalCollection();
+    render();
+    if (!state.loginId) return;
+    try {
+      const data = await fetchSharedData();
+      const remote = data && data.critterCollectedByUser && data.critterCollectedByUser[state.loginId];
+      if (Array.isArray(remote)) { state.collected = new Set(remote); saveLocalCollection(); render(); }
+    } catch (error) { console.warn("Critter collection sync load failed:", error); }
+  }
+
+  let collectionSyncQueue = Promise.resolve();
+  function queueCollectionSave() {
+    if (!state.loginId || !hasSyncConfig()) return;
+    collectionSyncQueue = collectionSyncQueue.catch(() => undefined).then(async () => {
+      const current = await fetchSharedData() || {};
+      const users = current.critterCollectedByUser && typeof current.critterCollectedByUser === "object" ? current.critterCollectedByUser : {};
+      users[state.loginId] = [...state.collected];
+      const config = getSyncConfig();
+      const response = await fetch(config.projectUrl + "/rest/v1/" + encodeURIComponent(config.table), {
+        method: "POST",
+        headers: getSyncHeaders({ Prefer: "resolution=merge-duplicates" }),
+        body: JSON.stringify({ id: config.rowId, data: Object.assign({}, current, { critterCollectedByUser: users }), updated_at: new Date().toISOString() }),
+      });
+      if (!response.ok) throw new Error("생물 수집 데이터 저장 실패: " + response.status);
+    }).catch((error) => console.warn("Critter collection sync save failed:", error));
+  }
+
+  function toggleCollected(item) {
+    if (!state.loginId) return;
+    if (state.collected.has(item.id)) state.collected.delete(item.id);
+    else state.collected.add(item.id);
+    saveLocalCollection();
+    queueCollectionSave();
+    renderList();
+  }
   function formatBells(value) {
     return `${(Number(value) || 0).toLocaleString("ko-KR")}벨`;
   }
@@ -236,7 +325,8 @@
     const filtered = list.filter((item) => {
       const matchesQuery = !query || [item.name, item.englishName].some((value) => value.toLocaleLowerCase().includes(query));
       const matchesAvailability = !state.onlyAvailableNow || item.availableNow;
-      return matchesQuery && matchesAvailability;
+      const matchesCollection = state.collectionFilter === "all" || (state.collectionFilter === "collected" ? state.collected.has(item.id) : !state.collected.has(item.id));
+      return matchesQuery && matchesAvailability && matchesCollection;
     });
 
     filtered.sort((a, b) => {
@@ -322,7 +412,20 @@
     availabilityText.textContent = "지금 잡을 수 있는 것만";
     availabilityLabel.append(availabilityInput, availabilityText);
 
-    controls.append(searchLabel, sortLabel, availabilityLabel);
+    const collectionLabel = document.createElement("label");
+    collectionLabel.className = "critter-collection-filter";
+    const collectionText = document.createElement("span");
+    collectionText.textContent = "수집 상태";
+    const collectionSelect = document.createElement("select");
+    [["all", "전체"], ["collected", "수집완료"], ["missing", "미수집"]].forEach(([value, label]) => collectionSelect.append(new Option(label, value)));
+    collectionSelect.value = state.collectionFilter;
+    collectionSelect.addEventListener("change", (event) => {
+      state.collectionFilter = event.target.value;
+      renderList();
+    });
+    collectionLabel.append(collectionText, collectionSelect);
+
+    controls.append(searchLabel, sortLabel, collectionLabel, availabilityLabel);
     return controls;
   }
 
@@ -350,8 +453,23 @@
     return prices;
   }
 
+  function createCollectionButton(item) {
+    const button = createButton("critter-collect-button", state.collected.has(item.id) ? "수집완료" : (state.loginId ? "수집체크" : "로그인 필요"));
+    button.dataset.critterAction = "collect";
+    button.disabled = !state.loginId;
+    button.title = state.loginId ? "" : "로그인 후 수집 여부를 저장할 수 있습니다.";
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleCollected(item);
+    });
+    return button;
+  }
+
   function createCard(item) {
-    const card = createButton(`critter-card${item.availableNow ? " is-available" : " is-unavailable"}`, "");
+    const card = document.createElement("article");
+    card.className = `critter-card${item.availableNow ? " is-available" : " is-unavailable"}${state.collected.has(item.id) ? " is-collected" : ""}`;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
     card.setAttribute("aria-label", `${item.name} 상세 보기`);
 
     const image = document.createElement("img");
@@ -364,15 +482,12 @@
 
     const name = document.createElement("strong");
     name.textContent = item.name;
-
     const meta = document.createElement("p");
     meta.textContent = `${item.location} · ${item.time}`;
-
-    card.append(createAvailabilityBadge(item), image, name, createPriceBlock(item), meta);
-    card.addEventListener("click", () => {
-      state.detailId = item.id;
-      render();
-    });
+    card.append(createAvailabilityBadge(item), image, name, createPriceBlock(item), meta, createCollectionButton(item));
+    const openDetail = () => { state.detailId = item.id; render(); };
+    card.addEventListener("click", openDetail);
+    card.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetail(); } });
     return card;
   }
 
@@ -419,7 +534,7 @@
     title.textContent = item.name;
     const subtitle = document.createElement("p");
     subtitle.textContent = `${item.groupLabel} · ${item.englishName}`;
-    titleWrap.append(createAvailabilityBadge(item), title, subtitle, createPriceBlock(item));
+    titleWrap.append(createAvailabilityBadge(item), title, subtitle, createPriceBlock(item), createCollectionButton(item));
     hero.append(image, titleWrap);
 
     const detailList = document.createElement("dl");
@@ -499,5 +614,13 @@
     renderList();
   }
 
+  window.addEventListener("acnh-login-changed", loadCollectionForLogin);
+  window.addEventListener("acnh-critter-group-changed", (event) => {
+    if (!groups[event.detail?.group]) return;
+    state.activeGroup = event.detail.group;
+    state.detailId = "";
+    render();
+  });
+  loadCollectionForLogin();
   loadCritters();
 })();

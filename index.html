@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="autumn">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -84,9 +84,16 @@
         max-height: 48px;
       }
     </style>
-    <link rel="stylesheet" href="./styles.css?v=20260827-1" />
+    <link rel="stylesheet" href="./styles.css?v=20261107-1" />
   </head>
   <body>
+    <div class="seasonal-decor" aria-hidden="true">
+      <span class="seasonal-leaf leaf-one">&#127810;</span>
+      <span class="seasonal-leaf leaf-two">&#127810;</span>
+      <span class="seasonal-leaf leaf-three">&#127810;</span>
+      <span class="seasonal-mushroom mushroom-one">&#127812;</span>
+      <span class="seasonal-mushroom mushroom-two">&#127812;</span>
+    </div>
     <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
     <aside id="sidebar" class="sidebar" aria-hidden="true" aria-label="메뉴">
@@ -112,37 +119,41 @@
         >
           주민 검색
         </button>
-        <button class="sidebar-link" type="button" data-view="island" data-island="kongboki">
-          콩보키섬 주민
+
+        <button class="sidebar-link sidebar-group-toggle" type="button" aria-expanded="false" aria-controls="kongbokiSubmenu">
+          콩보키섬
         </button>
-        <button class="sidebar-link" type="button" data-view="wishlist" data-island="kongboki">
-          콩보키섬 찜
+        <div id="kongbokiSubmenu" class="sidebar-submenu" hidden>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="island" data-island="kongboki">콩보키섬 주민</button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="wishlist" data-island="kongboki">콩보키섬 찜</button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="departed" data-island="kongboki">콩보키섬 떠남</button>
+        </div>
+
+        <button class="sidebar-link sidebar-group-toggle" type="button" aria-expanded="false" aria-controls="kongsolkiSubmenu">
+          콩솔키섬
         </button>
-        <button class="sidebar-link" type="button" data-view="island" data-island="kongsolki">
-          콩솔키섬 주민
-        </button>
-        <button class="sidebar-link" type="button" data-view="wishlist" data-island="kongsolki">
-          콩솔키섬 찜
-        </button>
+        <div id="kongsolkiSubmenu" class="sidebar-submenu" hidden>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="island" data-island="kongsolki">콩솔키섬 주민</button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="wishlist" data-island="kongsolki">콩솔키섬 찜</button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="departed" data-island="kongsolki">콩솔키섬 떠남</button>
+        </div>
+
         <button class="sidebar-link" type="button" data-view="turnip">
           무값 예측기
         </button>
-        <button
-          id="tipsToggleButton"
-          class="sidebar-link tips-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="tipsSubmenu"
-        >
+        <button class="sidebar-link sidebar-group-toggle" type="button" aria-expanded="false" aria-controls="collectionSubmenu">
+          &#46020;&#44048; &#44288;&#47532;
+        </button>
+        <div id="collectionSubmenu" class="sidebar-submenu" hidden>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="collection-art">&#48120;&#49696;&#54408;</button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="collection-critter">&#49373;&#47932; &#46020;&#44048;</button>
+        </div>
+
+        <button id="tipsToggleButton" class="sidebar-link sidebar-group-toggle tips-toggle" type="button" aria-expanded="false" aria-controls="tipsSubmenu">
           모동숲 팁
         </button>
         <div id="tipsSubmenu" class="sidebar-submenu" hidden>
-          <button class="sidebar-link sidebar-sublink" type="button" data-view="tips-mystery">
-            마일섬 / 갑돌섬
-          </button>
-          <button class="sidebar-link sidebar-sublink" type="button" data-view="tips-critter">
-            생물 도감
-          </button>
+          <button class="sidebar-link sidebar-sublink" type="button" data-view="tips-mystery">마일섬 / 갑돌섬</button>
         </div>
       </nav>
 
@@ -267,6 +278,69 @@
 
 
       <section
+        id="departedView"
+        class="view-panel owned-panel"
+        data-view="departed"
+        aria-labelledby="departed-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="departed-title">&#52964;&#48372;&#53412;&#49452; &#46496;&#45224;</h2>
+          <span id="departedCount" class="status-pill">0&#47749;</span>
+        </div>
+        <div id="departedVillagers" class="owned-list" aria-live="polite"></div>
+      </section>
+
+      <section
+        id="collectionView"
+        class="view-panel placeholder-panel"
+        data-view="collection"
+        aria-labelledby="collection-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="collection-title">&#46020;&#44048; &#44288;&#47532;</h2>
+        </div>
+        <p class="empty-state">&#46020;&#44048; &#44288;&#47532; &#44592;&#45733;&#51012; &#51456;&#48708; &#51473;&#51077;&#45768;&#45796;.</p>
+      </section>
+      <section
+        id="artView"
+        class="view-panel art-panel"
+        data-view="collection-art"
+        aria-labelledby="art-title"
+        hidden
+      >
+        <div class="section-heading art-heading">
+          <h2 id="art-title">&#48120;&#49696;&#54408;</h2>
+          <span id="artCount" class="status-pill">0/0</span>
+        </div>
+        <div id="artListView">
+          <div class="art-toolbar">
+            <label class="art-search-label" for="artSearchInput">미술품 검색</label>
+            <input id="artSearchInput" class="art-search-input" type="search" placeholder="미술품 이름 검색" autocomplete="off" />
+            <div class="art-filters" role="group" aria-label="&#49688;&#51665; &#54596;&#53552;">
+              <button class="art-filter is-active" type="button" data-art-filter="all">&#51204;&#52404;</button>
+              <button class="art-filter" type="button" data-art-filter="collected">&#49688;&#51665; &#50756;&#47308;</button>
+              <button class="art-filter" type="button" data-art-filter="missing">&#48120;&#49688;&#51665;</button>
+            </div>
+          </div>
+          <div id="artGrid" class="art-grid" aria-live="polite"></div>
+        </div>
+        <div id="artDetailView" class="art-detail-view" hidden></div>
+      </section>
+      <section
+        id="critterGuideView"
+        class="view-panel tips-panel"
+        data-view="collection-critter"
+        aria-labelledby="critter-guide-title"
+        hidden
+      >
+        <div class="section-heading">
+          <h2 id="critter-guide-title">&#49373;&#47932; &#46020;&#44048;</h2>
+        </div>
+        <div id="critterGuideRoot"></div>
+      </section>
+      <section
         id="villagerDetailView"
         class="view-panel villager-detail-panel"
         data-view="villager-detail"
@@ -337,19 +411,7 @@
           </section>
         </div>
       </section>
-      <section
-        id="tipsCritterView"
-        class="view-panel tips-panel"
-        data-view="tips-critter"
-        aria-labelledby="tips-critter-title"
-        hidden
-      >
-        <div class="section-heading">
-          <h2 id="tips-critter-title">생물 도감</h2>
-        </div>
-        <div id="critterGuideRoot"></div>
-      </section>
-    </main>
+</main>
 
     <div id="loginModal" class="modal-backdrop" hidden>
       <form id="loginForm" class="login-modal" aria-labelledby="loginTitle">
@@ -385,7 +447,24 @@
       </article>
     </div>
 
-    <div id="houseImageModal" class="modal-backdrop" hidden>
+    <div id="artImageModal" class="modal-backdrop" hidden>
+      <article class="art-image-modal" role="dialog" aria-modal="true" aria-labelledby="artImageModalTitle">
+        <div class="login-modal-header">
+          <h2 id="artImageModalTitle">&#48120;&#49696;&#54408; &#51060;&#48120;&#51648;</h2>
+          <button id="artImageModalClose" class="modal-close-button" type="button" aria-label="&#51060;&#48120;&#51648; &#45803;&#44592;">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <div class="art-image-stage">
+          <img id="artModalImage" alt="" />
+        </div>
+        <div class="art-zoom-controls" role="group" aria-label="&#54869;&#45824; &#51228;&#50612;">
+          <button type="button" data-art-zoom="out" aria-label="&#52629;&#49548;">-</button>
+          <button type="button" data-art-zoom="reset" aria-label="&#50896;&#48376; &#53356;&#44592;">1:1</button>
+          <button type="button" data-art-zoom="in" aria-label="&#54869;&#45824;">+</button>
+        </div>
+      </article>
+    </div>    <div id="houseImageModal" class="modal-backdrop" hidden>
       <article class="house-modal" role="dialog" aria-modal="true" aria-labelledby="houseModalTitle">
         <div class="login-modal-header">
           <h2 id="houseModalTitle"></h2>
@@ -436,8 +515,10 @@
     <script src="./tips.js?v=20261016-2"></script>
     <script src="./turnip-predictions.js"></script>
     <script src="./turnips.js?v=20261016-2"></script>
-    <script src="./critters.js?v=20260805-4"></script>
+    <script src="./critters.js?v=20261107-2"></script>
+    <script src="./art-data.js?v=20261106-2"></script>
+    <script src="./art.js?v=20261106-4"></script>
     <script src="./soopoolleaf-data.js"></script>
-    <script src="./app.js?v=20261016-1" defer></script>
+    <script src="./app.js?v=20261107-3" defer></script>
   </body>
 </html>
