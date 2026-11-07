@@ -552,7 +552,9 @@
     const count = root.querySelector("#critterResultCount");
     if (!listRoot || !count) return;
 
-    count.textContent = `${list.length}개`;
+    const groupItems = state.critters[state.activeGroup] || [];
+    const collectedCount = groupItems.filter((item) => state.collected.has(item.id)).length;
+    count.textContent = `수집 ${collectedCount}/${groupItems.length} · ${list.length}개 표시`;
     listRoot.replaceChildren();
 
     if (!list.length) {
@@ -604,6 +606,9 @@
     title.textContent = `${groups[state.activeGroup].label} 도감`;
     const count = document.createElement("span");
     count.id = "critterResultCount";
+    const groupItems = state.critters[state.activeGroup] || [];
+    const collectedCount = groupItems.filter((item) => state.collected.has(item.id)).length;
+    count.textContent = `수집 ${collectedCount}/${groupItems.length}`;
     summary.append(title, count);
 
     const listRoot = document.createElement("div");

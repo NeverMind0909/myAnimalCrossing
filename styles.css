@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   --phone-width: 393px;
   --sidebar-width: 280px;
@@ -2348,4 +2348,52 @@ dd {
 .app-shell {
   position: relative;
   z-index: 2;
+}
+
+/* Recent collection controls */
+.art-card.is-collected {
+  border-width: 3px;
+  box-shadow: 0 0 0 1px var(--leaf-dark), 0 8px 18px rgba(104, 61, 38, 0.14);
+}
+
+.art-card-actions button {
+  white-space: pre-line;
+  line-height: 1.1;
+}
+
+.art-card-actions .art-collect-button {
+  background: var(--leaf-dark);
+  border-color: var(--leaf-dark);
+  color: #ffffff;
+}
+
+.art-card-actions .art-detail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+  color: var(--leaf-dark) !important;
+}
+
+@media (max-width: 430px) {
+  .seasonal-decor {
+    z-index: 1;
+  }
+
+  .seasonal-leaf {
+    font-size: 2.1rem;
+    opacity: 0.72;
+  }
+
+  .seasonal-mushroom {
+    font-size: 1.9rem;
+    opacity: 0.58;
+  }
+
+  .leaf-one { top: 15%; left: 1%; }
+  .leaf-two { top: 48%; right: 1%; }
+  .leaf-three { bottom: 10%; left: 2%; }
+  .mushroom-one { bottom: 7%; right: 2%; }
+  .mushroom-two { top: 31%; left: 0; }
 }

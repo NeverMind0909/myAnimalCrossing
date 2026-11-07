@@ -173,7 +173,7 @@
     button.setAttribute("aria-pressed", collected ? "true" : "false");
     button.disabled = !state.loginId;
     button.title = state.loginId ? "" : "로그인 후 수집 여부를 저장할 수 있습니다.";
-    button.textContent = collected ? "수집완료" : (state.loginId ? "수집체크" : "로그인 필요");
+    button.textContent = collected ? "수집\n완료" : (state.loginId ? "수집\n체크" : "로그인 필요");
     return button;
   }
 
@@ -222,7 +222,7 @@
       detailButton.dataset.artAction = "detail";
       detailButton.dataset.artKey = item.key;
       detailButton.textContent = "상세";
-      actions.append(createCollectButton(item), detailButton);
+      actions.append(detailButton, createCollectButton(item));
       body.append(name, meta, actions);
       card.append(imageWrap, body);
       els.grid.append(card);
